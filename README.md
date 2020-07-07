@@ -3,6 +3,8 @@
 
 
 
+
+
 Liberg为基于Spring Boot的Web开发提供便利。由Liberg库（jar）和LibergCoder插件（Idea版）构成。
 
 > Liberg库，提供了一个极轻量级的ORM（Object Relational Mapping）、以及一些Web项目支撑代码。 
@@ -10,6 +12,8 @@ Liberg为基于Spring Boot的Web开发提供便利。由Liberg库（jar）和Lib
 > 为什么如此轻量级？
 >
 > 是因为借助LibergCoder自动生成代码，实现了**非反射的ORM**。
+
+
 
 
 
@@ -23,11 +27,13 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 
 
 
+
+
 ### 如何使用
 
 1. 在Idea中创建SpringBoot项目，仅仅需要勾选Spring Web依赖。
 
-2. 安装Idea插件LibergCoder（后文提供下载地址），安装完成，重启Idea，菜单栏末尾多出一个LibergCoder菜单。
+2. 安装Idea插件[LibergCoder-1.2.0.jar](https://github.com/liberg-cn/liberg-demo/blob/master/lib/LibergCoder_1.2.0.jar)，安装完成，重启Idea，菜单栏末尾多出一个LibergCoder菜单。
 
 3. **打开SpringBoot项目的启动类（判断标准：带@SpringBootApplication注解），然后执行点击LibergCoder菜单，执行`Initialize...`完成项目代码的初始化**。
 
@@ -106,6 +112,8 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 
 
 
+
+
 ### 使用Liberg+LibergCoder的开发体验
 
 重复的事情，无须重复做。
@@ -140,13 +148,17 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 
 ----
 
-如果刚巧，您也认可Liberg这种**非反射ORM+插件生成支撑代码**的开发方式，欢迎加入贡献代码，一起交流进步。
+如果您也认可Liberg这种**非反射ORM+插件生成支撑代码**的开发方式，欢迎加入贡献代码，一起交流进步。
 
-*Liberg，让Web开发更简单！*
 
+
+>  *Liberg，让Web开发更简单！*
+>
+>  
+>
 >  QQ交流群（推荐）：126193402
 >
-> 
+>  
 
 
 
