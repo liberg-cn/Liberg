@@ -33,7 +33,7 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 
 1. 在Idea中创建SpringBoot项目，仅仅需要勾选Spring Web依赖。
 
-2. 安装Idea插件[LibergCoder-1.2.0.jar](https://github.com/liberg-cn/liberg-demo/blob/master/lib/LibergCoder_1.2.0.jar)，安装完成，重启Idea，菜单栏末尾多出一个LibergCoder菜单。
+2. 安装Idea插件[LibergCoder-1.2.0.jar](https://github.com/liberg-cn/liberg-demo/blob/master/lib/LibergCoder-1.2.0.jar)，安装完成，重启Idea，菜单栏末尾多出一个LibergCoder菜单。
 
 3. **打开SpringBoot项目的启动类（判断标准：带@SpringBootApplication注解），然后执行点击LibergCoder菜单，执行`Initialize...`完成项目代码的初始化**。
 
@@ -149,6 +149,22 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 ----
 
 如果您也认可Liberg这种**非反射ORM+插件生成支撑代码**的开发方式，欢迎加入贡献代码，一起交流进步。
+
+
+
+
+
+### 相关项目
+
+- liberg-demo:  Liberg演示项目
+
+  https://github.com/liberg-cn/liberg-demo
+
+- LibergCoder: Idea插件(已支持idea2020)
+
+  https://github.com/liberg-cn/LibergCoder
+
+
 
 
 
