@@ -85,6 +85,7 @@ public class Query extends Where<Query> {
         return this;
     }
 
+    @Override
     public String build() {
         return super.build() + getOrderBy();
     }

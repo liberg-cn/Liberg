@@ -29,6 +29,7 @@ public class PreparedColumnQueryBuilder extends PreparedCriteria<PreparedColumnQ
         return column.getName();
     }
 
+    @Override
     public String build() {
         if(sql == null) {
             StringBuilder sb = new StringBuilder();

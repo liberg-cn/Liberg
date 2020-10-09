@@ -25,6 +25,7 @@ public class PreparedWhere<T extends PreparedWhere> {
             return true;
         }
 
+        @Override
         public String build() {
             return "(";
         }

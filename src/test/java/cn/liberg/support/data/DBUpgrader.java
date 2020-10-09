@@ -15,6 +15,7 @@ public class DBUpgrader extends DBImpl {
         super(dbConf);
     }
 
+    @Override
     public int upgrade(Statement stat, int dbVersion, int newVersion) {
         Class clazz = this.getClass();
         int version = dbVersion;

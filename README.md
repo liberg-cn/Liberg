@@ -1,19 +1,15 @@
 # Liberg
-    A high-performance and light-weighted suites for spring-boot-based web developing.
+    A high-performance and light-weighted suites for spring-boot-based web development.
 
 
 
-
-
-Liberg为基于Spring Boot的Web开发提供便利。由Liberg库（jar）和LibergCoder插件（Idea版）构成。
+Liberg为从零基础小白到中高级Java Web开发者提供一站式的极速解决方案。由Liberg库（jar）和LibergCoder插件（Idea版）构成。
 
 > Liberg库，提供了一个极轻量级的ORM（Object Relational Mapping）、以及一些Web项目支撑代码。 
 >
 > 为什么如此轻量级？
 >
 > 是因为借助LibergCoder自动生成代码，实现了**非反射的ORM**。
-
-
 
 
 
@@ -27,15 +23,17 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 
 
 
-
-
 ### 如何使用
 
-1. 在Idea中创建SpringBoot项目，仅仅需要勾选Spring Web依赖。
+1. 在Idea中创建`Spring Initializr`项目，仅仅需要勾选Spring Web依赖。
 
 2. 安装Idea插件[LibergCoder-1.2.0.jar](https://github.com/liberg-cn/liberg-demo/blob/master/lib/LibergCoder-1.2.0.jar)，安装完成，重启Idea，菜单栏末尾多出一个LibergCoder菜单。
 
-3. **打开SpringBoot项目的启动类（判断标准：带@SpringBootApplication注解），然后执行点击LibergCoder菜单，执行`Initialize...`完成项目代码的初始化**。
+3. 项目中手动引入jar包：[liberg-1.2.0.jar](https://github.com/liberg-cn/liberg-demo/blob/master/lib/liberg-1.2.0.jar)，引入方式见文末备注。
+
+4. **打开SpringBoot项目的启动类（判断标准：带@SpringBootApplication注解），然后执行点击LibergCoder菜单，执行`Initialize...`完成项目代码的初始化**。
+
+   **`Initialize`执行完成之后，整个项目会被IDEA重新载入**。
 
    `Initialize`操作会执行如下动作：
 
@@ -55,7 +53,7 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 
    - 创建data.DBConfig类，用于从`application.properties`文件加载数据库的配置。
 
-   - 创建data.DBImpl类，这个类是数据库建表、数据库版本升级，以及数据初始化的入口，由LibergCoder工具维护。
+   - 创建data.DBImpl类，这个类是数据库建表、数据库版本升级，以及数据初始化的入口，由LibergCoder插件维护。
 
    - 创建data.DBInitializer类，开发者在这里增加数据初始化的代码。
 
@@ -63,9 +61,9 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 
      `Initialize`一般仅需要执行一次，如果某些支撑文件缺失，可以执行`Initialize`重新创建出来。
 
-     `Initialize`执行完成之后，整个项目会被IDEA重新加载一次。
+     
 
-4. **创建一个entity类，比如data/entity/User.java**
+5. **创建一个entity类，比如data/entity/User.java**
 
    ```java
    public class User {
@@ -86,7 +84,7 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
    - 修改`data.DBImpl`加入user表的建表逻辑。
    - 修改`User.java`文件，给每个字段增加@JSONField注解。
 
-5. **创建一个接口类，比如service/interfaces/IUserService.java**
+6. **创建一个接口类，比如service/interfaces/IUserService.java**
 
    ```java
    public interface IUserService {
@@ -104,13 +102,11 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
    - 创建`service.UserService`类，这是IUserService的实现类，开发者在此编写代码，完成接口需要实现的具体业务逻辑。
    - 在`resources/static/api-doc`目录下创建Markdown格式的接口文档。
 
-6. 运行SpringBoot项目，看看发生了什么。
+7. 运行SpringBoot项目，看看发生了什么。
 
 
 
 如果遇到了麻烦，请参考示例项目：https://github.com/liberg-cn/liberg-demo
-
-
 
 
 
@@ -152,9 +148,9 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 
 
 
-
-
 ### 相关项目
+
+- Liberg项目：[https://github.com/liberg-cn/Liberg](https://github.com/liberg-cn/liberg-demo)
 
 - liberg-demo:  Liberg演示项目
 
@@ -166,15 +162,10 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 
 
 
-
-
 >  *Liberg，让Web开发更简单！*
->
->  
 >
 >  QQ交流群（推荐）：126193402
 >
->  
 
 
 

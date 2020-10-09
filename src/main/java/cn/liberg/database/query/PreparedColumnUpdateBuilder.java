@@ -25,6 +25,7 @@ public class PreparedColumnUpdateBuilder extends PreparedCriteria<PreparedColumn
         return column.getName()+"=?";
     }
 
+    @Override
     public String build() {
         if(sql == null) {
             StringBuilder sb = new StringBuilder();

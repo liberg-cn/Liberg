@@ -3,21 +3,51 @@ package cn.liberg.database;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+/**
+ * @author Liberg
+ */
 public interface IDataBase {
 
+    /**
+     * 获取数据库的名称
+     * @return 数据库名称
+     */
     public String getName();
 
+    /**
+     * 获取数据库的当前版本
+     * @return 数据库当前版本
+     */
     public int getCurrentVersion();
 
+    /**
+     * 获取数据库的配置信息
+     * @return
+     */
     public IDataBaseConf getConfig();
 
-    //创建数据库表结构
+    /**
+     * 此方法中完成数据库表结构的创建
+     * @param stat
+     * @throws SQLException
+     */
     public void createTable(Statement stat) throws SQLException;
 
-    //数据库升级扩展
+    /**
+     * 实现数据库从dbVersion到newVersion的版本升级逻辑，升级内容包括结构和数据
+     * @param stat
+     * @param dbVersion
+     * @param newVersion
+     * @return
+     * @throws SQLException
+     */
     public int upgrade(Statement stat, int dbVersion, int newVersion) throws SQLException;
 
-    //初始化数据库数据，比如创建一个超级管理员等
+    //
+
+    /**
+     * 此方法中完成数据库数据的初始化，比如创建一个超级管理员等
+     */
     public void initData();
 
     default public String typeInt() {

@@ -79,7 +79,7 @@ public class AsyncDbOperator {
 				ArrayList<OpInfo> infos=new ArrayList<OpInfo>();
 				String sql="";
 				ArrayList<String> sqls=new ArrayList<String>();
-				while(mRunning==true){					
+				while(mRunning){
 					synchronized(mOPList){
 						while(mOPList.size()>0 && infos.size()<BATCH_OP_NUMBER){
 							infos.add(mOPList.remove(0));

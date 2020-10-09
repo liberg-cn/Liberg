@@ -37,6 +37,7 @@ public class PreparedPartialQueryBuilder extends PreparedCriteria<PreparedPartia
         return sb.toString();
     }
 
+    @Override
     public String build() {
         if(sql == null) {
             StringBuilder sb = new StringBuilder();

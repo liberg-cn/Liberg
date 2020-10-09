@@ -1,6 +1,7 @@
 package cn.liberg.database;
 
 import cn.liberg.core.OperatorException;
+import cn.liberg.core.StatusCode;
 import cn.liberg.database.query.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -8,10 +9,14 @@ import org.apache.commons.logging.LogFactory;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+/**
+ * @author Liberg
+ */
 public abstract class BaseDao<T> {
     private Log logger = LogFactory.getLog(getClass());
 
@@ -20,15 +25,32 @@ public abstract class BaseDao<T> {
     private DBHelper dbHelper;
 
     protected List<Column> columns;
-    private int columnCount = 1;//含_id字段的字段总数
-    public String COLUMNS_STRING = "";//不含_id的表字段拼接结果
+
+    /**
+     * 含_id字段的字段总数
+     */
+    private int columnCount;
+
+    /**
+     * 不含_id的表字段拼接结果
+     */
+    public String COLUMNS_STRING;
+
     //insert into tableName(COLUMNS_STRING) values(?,?,?)
     public String SQL0_SAVE;
+
     //select _id,COLUMNS_STRING from tableName where _id=?
     public String SQL0_GET_BY_ID;
     //update tableName set col1=?,col2=?,col3=? where _id=?
     public String SQL0_UPDATE_BY_ID;
 
+    private PreparedQueryBuilder getGtIdLimit;
+
+    /**
+     * 供子类覆盖的钩子方法
+     * @param entity
+     * @throws OperatorException
+     */
     public void fillData(T entity) throws OperatorException {
         //可能需要填充一些未映射(保存)到数据库的成员
     }
@@ -191,6 +213,27 @@ public abstract class BaseDao<T> {
         return dbHelper.getAllBySql(sb.toString(), this);
     }
 
+    /**
+     * 查询Id比gtId大的limit条数据
+     * @param gtId 查询Id比gtId大的数据
+     * @param limit 查询记录条数上限
+     * @return 数据记录列表，没有足够的数据时，返回数据列表的长度会小于limit
+     * @throws OperatorException
+     */
+    public List<T> getGtIdLimit(long gtId, int limit) throws OperatorException {
+        //TODO limit可以动态填充？
+        if(getGtIdLimit == null) {
+            getGtIdLimit = buildQuery().gt(columnId).limit(limit).asc(columnId);
+        }
+
+        try(PreparedQuery preparedQuery = prepare(getGtIdLimit)) {
+            preparedQuery.set(columnId, gtId);
+            return preparedQuery.all();
+        } catch (Exception e) {
+            throw new OperatorException(StatusCode.ERROR_DB, e);
+        }
+    }
+
     public List<T> getAllByWhere(String where) throws OperatorException {
         StringBuilder sb = buildWhere(where);
         return dbHelper.getAllBySql(sb.toString(), this);
@@ -240,7 +283,6 @@ public abstract class BaseDao<T> {
         dbHelper.clear(this);
     }
 
-    //便捷方法
     public T getEq(StringColumn field, String value) throws OperatorException {
         return getByWhere(field.getName() + "='" + value + "'");
     }

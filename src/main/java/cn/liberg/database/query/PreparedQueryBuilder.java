@@ -20,6 +20,7 @@ public class PreparedQueryBuilder extends PreparedCriteria<PreparedQueryBuilder>
         this.dao = dao;
     }
 
+    @Override
     public String build() {
         if(sql == null) {
             StringBuilder sb = new StringBuilder();
