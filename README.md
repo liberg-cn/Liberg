@@ -1,11 +1,11 @@
 # Liberg
-    A high-performance and light-weighted suites for spring-boot-based web development.
+    A high-performance and lightweight suites for spring-boot-based web development.
 
 
 
 Liberg为从零基础小白到中高级Java Web开发者提供一站式的极速解决方案。由Liberg库（jar）和LibergCoder插件（Idea版）构成。
 
-> Liberg库，提供了一个极轻量级的ORM（Object Relational Mapping）、以及一些Web项目支撑代码。 
+> Liberg库，提供了一个极轻量级的`ORM`（Object Relational Mapping）、以及一些Web项目支撑代码。 
 >
 > 为什么如此轻量级？
 >
@@ -17,9 +17,9 @@ Liberg为从零基础小白到中高级Java Web开发者提供一站式的极速
 
 Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统。
 
-**数据**：由data.entity包下的实体类进行承载，映射到数据库中的表。entity的一个字段映射为数据库表的一列。
+**数据**：由`data.entity`包下的实体类进行承载，映射到数据库中的表。entity的一个字段映射为数据库表的一列。
 
-**接口**：由service.interfaces包下的接口声明类定义，映射为controller.api.XxxControllor，而XxxController是承接http请求的入口。每一个接口方法，映射为一个接口uri。
+**接口**：由`service.interfaces`包下的接口声明类定义，映射为controller.api.XxxControllor，而XxxController是承接http请求的入口。每一个接口方法，映射为一个接口uri。
 
 
 
@@ -39,9 +39,9 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 
    - 在项目目录下创建LibergCoder的配置文件`LibergConfig.properties`。
 
-   - 修改pom.xml，增加mysql和fastjson依赖，如果缺失的话。
+   - 修改`pom.xml`，增加mysql和fastjson依赖，如果缺失的话。
 
-   - 修改resources下的`application.properties`文件，增加一些数据库和`application.name`等默认配置。
+   - 修改`resources`下的`application.properties`文件，增加一些数据库和`application.name`等默认配置。
 
    - 创建`data.dao、data.entity、data.type、service.interfaces、controller.api、misc`等package。
 
@@ -51,13 +51,13 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 
      
 
-   - 创建data.DBConfig类，用于从`application.properties`文件加载数据库的配置。
+   - 创建`data.DBConfig`类，用于从`application.properties`文件加载数据库的配置。
 
-   - 创建data.DBImpl类，这个类是数据库建表、数据库版本升级，以及数据初始化的入口，由LibergCoder插件维护。
+   - 创建`data.DBImpl`类，这个类是数据库建表、数据库版本升级，以及数据初始化的入口，由LibergCoder插件维护。
 
-   - 创建data.DBInitializer类，开发者在这里增加数据初始化的代码。
+   - 创建`data.DBInitializer`类，开发者在这里增加数据初始化的代码。
 
-   - 创建data.DBUpgrader类，由LibergCoder维护的数据库版本自动升级实现类。一般情况下不需要额外关心。需要将多个升级版本合并为一个升级版本时，可以手动编辑删掉一些版本的`upgradeTo`方法，记得一并修改DBImpl中的数据库当前版本。
+   - 创建`data.DBUpgrader`类，由LibergCoder维护的数据库版本自动升级实现类。一般情况下不需要额外关心。需要将多个升级版本合并为一个升级版本时，可以手动编辑删掉一些版本的`upgradeTo`方法，记得一并修改DBImpl中的数据库当前版本。
 
      `Initialize`一般仅需要执行一次，如果某些支撑文件缺失，可以执行`Initialize`重新创建出来。
 
