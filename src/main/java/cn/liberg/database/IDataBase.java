@@ -50,6 +50,14 @@ public interface IDataBase {
      */
     public void initData();
 
+    default public String typeByte() {
+        return "TINYINT NOT NULL DEFAULT 0";
+    }
+
+    default public String typeByte(int defVal) {
+        return "TINYINT NOT NULL DEFAULT " + defVal;
+    }
+
     default public String typeInt() {
         return "INT NOT NULL DEFAULT 0";
     }

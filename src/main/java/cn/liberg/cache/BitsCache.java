@@ -38,6 +38,7 @@ public class BitsCache {
         }
     }
 
+
     public boolean isSet(String key, List<Integer> list) {
         for(int i : list) {
             if(!isSet(key, i)) {
@@ -199,33 +200,47 @@ public class BitsCache {
         return sb.toString();
     }
 
+    public static boolean isSet(byte val, int index) {
+        int mask = MASK[index&7];//index的有效范围是0~7
+        return (val&mask) == mask;
+    }
+
     public static void main(String[] args) {
-        BitsCache cache = new BitsCache(32);
 
-        List<Integer> list = new ArrayList<>();
-        list.add(0);
-        list.add(3);
-        list.add(8);
-        list.add(9);
-        list.add(19);
-
-        for(int i=0;i< list.size();i++) {
-            cache.set("abc", list.get(i));
-            cache.set("def", list.get(i));
+        byte val = 0b0001_1000;
+        System.out.println(val);
+        System.out.println(isSet(val,0));
+        System.out.println(isSet(val,3));
+        System.out.println(isSet(val,4));
 
 
-        }
 
-        System.out.println(cache);
-        System.out.println(cache.isSet("def", list));
-        System.out.println(cache.isSet("abc", list));
-        list.add(21);
-        System.out.println(cache.isSet("def", list));
-        System.out.println(cache.isSet("abc", list));
-        cache.set("abc", 21);
-        System.out.println(cache);
-        System.out.println(cache.isSet("def", list));
-        System.out.println(cache.isSet("abc", list));
+//        BitsCache cache = new BitsCache(32);
+//
+//        List<Integer> list = new ArrayList<>();
+//        list.add(0);
+//        list.add(3);
+//        list.add(8);
+//        list.add(9);
+//        list.add(19);
+//
+//        for(int i=0;i< list.size();i++) {
+//            cache.set("abc", list.get(i));
+//            cache.set("def", list.get(i));
+//
+//
+//        }
+//
+//        System.out.println(cache);
+//        System.out.println(cache.isSet("def", list));
+//        System.out.println(cache.isSet("abc", list));
+//        list.add(21);
+//        System.out.println(cache.isSet("def", list));
+//        System.out.println(cache.isSet("abc", list));
+//        cache.set("abc", 21);
+//        System.out.println(cache);
+//        System.out.println(cache.isSet("def", list));
+//        System.out.println(cache.isSet("abc", list));
     }
 
 }

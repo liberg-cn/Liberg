@@ -228,8 +228,8 @@ public class DBHelper {
     public <T> List<T> getAllBySql(String sql, BaseDao dao) throws OperatorException {
         Connection conn = null;
         Statement stat = null;
-        ResultSet rs = null;
         List<T> list = new ArrayList<>();
+        ResultSet rs;
         try {
             conn = dbConnector.getConnect();
             stat = conn.createStatement();

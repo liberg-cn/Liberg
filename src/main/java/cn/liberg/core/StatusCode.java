@@ -32,7 +32,7 @@ public enum StatusCode implements IStatusCode {
 
     private String desc;
     private int code;
-    private StatusCode(int code, String desc) {
+    StatusCode(int code, String desc) {
         this.code = code;
         this.desc = desc;
     }
