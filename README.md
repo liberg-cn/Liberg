@@ -13,6 +13,10 @@ Liberg为从零基础小白到中高级Java Web开发者提供一站式的极速
 
 
 
+**特别说明：**由于Github在国内访问太慢，相关文档和资源优先在网站[liberg.cn](http://liberg.cn/)进行更新。
+
+
+
 ### Web系统设计理念
 
 Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统。
@@ -23,13 +27,13 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 
 
 
-### 如何使用
+### 如何开始
 
 1. 在Idea中创建`Spring Initializr`项目，仅仅需要勾选Spring Web依赖。
 
-2. 安装Idea插件[LibergCoder-1.2.0.jar](https://github.com/liberg-cn/liberg-demo/blob/master/lib/LibergCoder-1.2.0.jar)，安装完成，重启Idea，菜单栏末尾多出一个LibergCoder菜单。
+2. 安装Idea插件[LibergCoder.jar](https://github.com/liberg-cn/LibergCoder/blob/master/LibergCoder.jar)，安装完成，重启Idea，菜单栏末尾多出一个LibergCoder菜单。
 
-3. 项目中手动引入jar包：[liberg-1.2.0.jar](https://github.com/liberg-cn/liberg-demo/blob/master/lib/liberg-1.2.0.jar)，引入方式见文末备注。
+3. 项目中手动引入jar包：[liberg-1.2.0.jar](https://github.com/liberg-cn/Liberg/blob/master/target/liberg-1.2.0.jar)，引入方式见文末备注。
 
 4. **打开SpringBoot项目的启动类（判断标准：带@SpringBootApplication注解），然后执行点击LibergCoder菜单，执行`Initialize...`完成项目代码的初始化**。
 
@@ -47,7 +51,7 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 
    - 创建`misc.InitializeRunner`类，该类完成数据库的初始化（建库、建表、初始化数据等等）。
 
-   - 创建`misc.ResponseBodyProcessor`类，完成fastjson序列化，并且加入JSONP的支持。
+   - 创建`misc.ResponseBodyProcessor`类，完成fastjson序列化，并且加入跨域和JSONP的支持。
 
      
 
@@ -128,7 +132,7 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 >
 > 1. Liberg默认依赖mysql和fastjson。
 >
-> 2. Liberg JAR还未提交Maven中央仓库。目前可以下载[liberg-1.2.0.jar](https://github.com/liberg-cn/liberg-demo/blob/master/lib/liberg-1.2.0.jar)，在项目下新增一个lib目录，放入jar包，然后在pom.xml中引入：
+> 2. Liberg JAR还未提交Maven中央仓库。目前可以下载[liberg-1.2.0.jar](https://github.com/liberg-cn/Liberg/blob/master/target/liberg-1.2.0.jar)，在项目下新增一个lib目录，放入jar包，然后在pom.xml中引入：
 >
 >    ```xml
 >    <dependency>
@@ -140,7 +144,7 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 >    </dependency>
 >    ```
 >
->    
+>    或者下载Liberg源码，本地`Maven instal`后直接进行引入。
 
 ----
 
