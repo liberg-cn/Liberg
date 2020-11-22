@@ -1,22 +1,29 @@
 package cn.liberg.database;
 
+import cn.liberg.core.Column;
 import cn.liberg.core.OperatorException;
 import cn.liberg.core.StatusCode;
-import cn.liberg.database.query.*;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.mysql.cj.jdbc.exceptions.CommunicationsException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.*;
-import java.util.Date;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 
+/**
+ * 数据库访问类，ORM的核心类
+ *
+ * @author Liberg
+ */
 public class DBHelper {
-    Log logger = LogFactory.getLog(getClass());
-
-    public static final String VERSION = "1.2.0";
+    private static final Logger logger = LoggerFactory.getLogger(DBHelper.class);
     private static volatile DBHelper selfInstance = null;
+
+    public static final String VERSION = "1.3.0";
+    public IDataBaseConf dbConf = null;
     boolean initialized = false;
 
     public static DBHelper self() {
@@ -39,13 +46,13 @@ public class DBHelper {
         if (initialized == false) {
             System.out.println(
                     "  _      _ _                    \n" +
-                            " | |    (_| |                   \n" +
-                            " | |     _| |__   ___ _ __ __ _ \n" +
-                            " | |    | | '_ \\ / _ | '__/ _` |\n" +
-                            " | |____| | |_) |  __| | | (_| |\n" +
-                            " |______|_|_.__/ \\___|_|  \\__, |\n" +
-                            "                           __/ |\n" +
-                            " Liberg (v"+VERSION+")          |___/ \n");
+                    " | |    (_| |                   \n" +
+                    " | |     _| |__   ___ _ __ __ _ \n" +
+                    " | |    | | '_ \\ / _ | '__/ _` |\n" +
+                    " | |____| | |_) |  __| | | (_| |\n" +
+                    " |______|_|_.__/ \\___|_|  \\__, |\n" +
+                    "                           __/ |\n" +
+                    " Liberg (v" + VERSION + ")          |___/ \n");
             createDatabaseIfAbsent(dbImpl.getConfig());
             ArrayList<IDataBase> dBCreators = new ArrayList<>();
             dBCreators.add(dbImpl);
@@ -54,27 +61,17 @@ public class DBHelper {
         initialized = true;
     }
 
-    private static final long ERR_WAIT_TIME = 1 * 60 * 1000;
-    private boolean mHaveSocketError = false;
-    private int mSocketErrorCount = 0;
-    private Date mLastSocketErrorTime = null;
-
-
-    private byte[] mLock = new byte[0];
-    public static Pattern mEmoji = Pattern.compile(
-            "[\ud83c\udc00-\ud83c\udfff]|[\ud83d\udc00-\ud83d\udfff]|[\u2600-\u27ff]",
-            Pattern.UNICODE_CASE | Pattern.CASE_INSENSITIVE);
-
     private DBVersionManager dbVersionMgr;
     private DBConnector dbConnector;
-    private AsyncDbOperator mAsyncOPer = null;
-    public IDataBaseConf dbConf = null;
+    AsyncSqlExecutor asyncSqlExecutor;
+
+    public int getAsyncWaitCount() {
+        return asyncSqlExecutor.getWaitCount();
+    }
 
     protected void createDatabaseIfAbsent(IDataBaseConf dbInfo) {
-        if (this.isCanUseDBStore()) {
-            dbConf = dbInfo;
-            dbConnector.init(dbConf);
-        }
+        dbConf = dbInfo;
+        dbConnector.init(dbConf);
     }
 
     public void initDatabase(ArrayList<IDataBase> dbs) {
@@ -83,70 +80,31 @@ public class DBHelper {
         }
         dbVersionMgr.dbInit();
         //开启异步Sql执行线程
-        mAsyncOPer = new AsyncDbOperator(this);
-        mAsyncOPer.start();
+        asyncSqlExecutor = new AsyncSqlExecutor(this);
+        asyncSqlExecutor.start();
     }
 
-    protected PreparedQuery prepare(PreparedQueryBuilder preparedBuilder) throws SQLException {
-        Connection conn = openConnect();
-        try {
-            PreparedStatement ps = conn.prepareStatement(preparedBuilder.build());
-            return new PreparedQuery(preparedBuilder.getDao(), ps);
-        } catch (SQLException e) {
-            logger.error("prepare failed.");
-            closeConnect(conn, true);
-            throw e;
-        }
-    }
-    protected PreparedPartialQuery prepare(PreparedPartialQueryBuilder preparedBuilder) throws SQLException {
-        Connection conn = openConnect();
-        try {
-            PreparedStatement ps = conn.prepareStatement(preparedBuilder.build());
-            return new PreparedPartialQuery(preparedBuilder.getColumns(), ps);
-        } catch (SQLException e) {
-            logger.error("prepare failed.");
-            closeConnect(conn, true);
-            throw e;
-        }
-    }
-    protected PreparedColumnQuery prepare(PreparedColumnQueryBuilder preparedBuilder) throws SQLException {
-        Connection conn = openConnect();
-        try {
-            PreparedStatement ps = conn.prepareStatement(preparedBuilder.build());
-            return new PreparedColumnQuery(preparedBuilder.getColumn(), ps);
-        } catch (SQLException e) {
-            logger.error("prepare failed.");
-            closeConnect(conn, true);
-            throw e;
-        }
-    }
-    protected PreparedPartialUpdate prepare(PreparedPartialUpdateBuilder preparedBuilder) throws SQLException {
-        Connection conn = openConnect();
-        try {
-            PreparedStatement ps = conn.prepareStatement(preparedBuilder.build());
-            return new PreparedPartialUpdate(preparedBuilder.getColumns(), ps);
-        } catch (SQLException e) {
-            logger.error("prepare failed.");
-            closeConnect(conn, true);
-            throw e;
-        }
-    }
-    protected PreparedColumnUpdate prepare(PreparedColumnUpdateBuilder preparedBuilder) throws SQLException {
-        Connection conn = openConnect();
-        try {
-            PreparedStatement ps = conn.prepareStatement(preparedBuilder.build());
-            return new PreparedColumnUpdate(preparedBuilder.getColumn(), ps);
-        } catch (SQLException e) {
-            logger.error("prepare failed.");
-            closeConnect(conn, true);
-            throw e;
+
+    /**
+     * 判断SQLException是否是通信错误所致
+     *
+     * 如果是通信错误，有必要释放连接池中所有的空闲连接
+     * @param e {@link SQLException}
+     */
+    public static boolean isTxError(SQLException e) {
+        if (e instanceof CommunicationsException
+                || e instanceof SQLNonTransientConnectionException) {
+            return true;
+        } else {
+            return false;
         }
     }
 
-    public long save(Object entity, BaseDao dao) throws OperatorException {
+    public <T> long save(T entity, BaseDao<T> dao) throws OperatorException {
         Connection conn = null;
         PreparedStatement ps = null;
-        ResultSet rs = null;
+        ResultSet rs;
+        boolean isTxError = false;
         try {
             conn = dbConnector.getConnect();
             ps = conn.prepareStatement(dao.SQL0_SAVE, PreparedStatement.RETURN_GENERATED_KEYS);
@@ -160,32 +118,18 @@ public class DBHelper {
             }
             return generatedId;
         } catch (SQLException e) {
-            logger.error("db error", e);
+            isTxError = isTxError(e);
             throw new OperatorException(StatusCode.ERROR_DB, e);
         } finally {
-            close(ps, conn);
+            close(ps, conn, isTxError);
         }
     }
-    public <T> void update(T entity, BaseDao dao) throws OperatorException {
+
+    public <T> T getById(long id, BaseDao<T> dao) throws OperatorException {
         Connection conn = null;
         PreparedStatement ps = null;
-        try {
-            conn = dbConnector.getConnect();
-            ps = conn.prepareStatement(dao.SQL0_UPDATE_BY_ID);
-            dao.fillPreparedStatement(entity, ps);
-            ps.setLong(dao.getColumnCount(), dao.getEntityId(entity));
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            logger.error("db error", e);
-            throw new OperatorException(StatusCode.ERROR_DB, e);
-        } finally {
-            close(ps, conn);
-        }
-    }
-    public <T> T getById(long id, BaseDao dao) throws OperatorException {
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
+        ResultSet rs;
+        boolean isTxError = false;
         T entity = null;
         try {
             conn = dbConnector.getConnect();
@@ -193,124 +137,85 @@ public class DBHelper {
             ps.setLong(1, id);
             rs = ps.executeQuery();
             if(rs.next()) {
-                entity = (T) dao.buildEntity(rs);
+                entity = dao.buildEntity(rs);
             }
             return entity;
         } catch (SQLException e) {
-            logger.error("db error", e);
+            isTxError = isTxError(e);
             throw new OperatorException(StatusCode.ERROR_DB, e);
         } finally {
-            close(ps, conn);
+            close(ps, conn, isTxError);
         }
     }
 
-    public <T> T getBySql(String sql, BaseDao dao) throws OperatorException {
+    public <T> T getBySql(String sql, BaseDao<T> dao) throws OperatorException {
         Connection conn = null;
         Statement stat = null;
         ResultSet rs = null;
+        boolean isTxError = false;
         T entity = null;
         try {
             conn = dbConnector.getConnect();
             stat = conn.createStatement();
             rs = stat.executeQuery(sql);
             if(rs.next()) {
-                entity = (T) dao.buildEntity(rs);
+                entity = dao.buildEntity(rs);
             }
             return entity;
         } catch (SQLException e) {
-            logger.error("db error", e);
+            isTxError = isTxError(e);
             throw new OperatorException(StatusCode.ERROR_DB, e);
         } finally {
-            close(stat, conn);
+            close(stat, conn, isTxError);
         }
     }
 
-    public <T> List<T> getAllBySql(String sql, BaseDao dao) throws OperatorException {
+    public <T> List<T> getAllBySql(String sql, BaseDao<T> dao) throws OperatorException {
         Connection conn = null;
         Statement stat = null;
         List<T> list = new ArrayList<>();
+        boolean isTxError = false;
         ResultSet rs;
         try {
             conn = dbConnector.getConnect();
             stat = conn.createStatement();
             rs = stat.executeQuery(sql);
             while (rs.next()) {
-                T entity = (T) dao.buildEntity(rs);
+                T entity = dao.buildEntity(rs);
                 list.add(entity);
             }
             return list;
         } catch (SQLException e) {
-            logger.error("db error", e);
+            isTxError = isTxError(e);
             throw new OperatorException(StatusCode.ERROR_DB, e);
         } finally {
-            close(stat, conn);
+            close(stat, conn, isTxError);
         }
     }
 
-    private boolean isCanUseDBStore() {
-        boolean result = false;
-        if (mHaveSocketError == false) {
-            result = true;
-        } else if (mLastSocketErrorTime != null) {
-            long internal = (new Date()).getTime() - mLastSocketErrorTime.getTime();
-            if (internal > ERR_WAIT_TIME) {
-                result = true;
-                mHaveSocketError = false;
-                mLastSocketErrorTime = null;
-            }
-        }
-        return result;
-    }
-
-    private void setDBException(Exception ex) {
-        if (mHaveSocketError == false) {
-            //TODO 连接异常断开后的恢复机制
-            /*if (ex instanceof CommunicationsException || (ex.getCause() != null
-                    && (ex.getCause() instanceof SocketException || ex.getCause() instanceof
-                    ConnectException)) || ex instanceof SocketException || ex instanceof
-                    ConnectException || ex instanceof MySQLNonTransientConnectionException) {
-                mHaveSocketError = true;
-                mLastSocketErrorTime = new Date();
-            }*/
-
-        }
-    }
-
-    private Connection openConnect() throws SQLException {
-        return dbConnector.getConnect();
-    }
-
-    public void closeConnect(Connection connect, boolean forceClose) {
-        if (connect != null) {
+    public void closeStatement(Statement statement) {
+        if (statement != null) {
             try {
-                if (forceClose == false) {
-                    mSocketErrorCount = 0;
-                    dbConnector.freeConnection(connect, forceClose);
-                } else {
-                    synchronized (mLock) {
-                        dbConnector.freeAllConnection(connect);
-                        mSocketErrorCount++;
-                        if (mSocketErrorCount < 100) {
-                            mHaveSocketError = false;
-                            mLastSocketErrorTime = null;
-                        }
-                    }
-                }
-            } catch (Exception e) {
+                statement.close();
+            } catch (SQLException e) {
                 logger.error("db error", e);
             }
-        } else if (forceClose) {
-            synchronized (mLock) {
-                mSocketErrorCount++;
-                if (mSocketErrorCount < 100) {
-                    mHaveSocketError = false;
-                    mLastSocketErrorTime = null;
-                }
-            }
         }
     }
 
-    public void close(Statement statement, Connection conn) {
+    public void closeConnect(Connection connect, boolean isTxError) {
+        try {
+            if (isTxError) {
+                dbConnector.freeAllConnection(connect);
+            } else {
+                dbConnector.freeConnection(connect, false);
+            }
+        } catch (Exception e) {
+            logger.error("db error", e);
+        }
+    }
+
+    public void close(Statement statement, Connection conn, boolean isTxError) {
         try {
             if (statement != null) {
                 statement.close();
@@ -318,73 +223,77 @@ public class DBHelper {
         } catch (SQLException e) {
             logger.error("db error", e);
         }
-        closeConnect(conn, mHaveSocketError);
+        closeConnect(conn, isTxError);
     }
 
-    public AsyncDbOperator newAsyncOperator() {
-        AsyncDbOperator asyncOPer = new AsyncDbOperator(this);
-        asyncOPer.start();
-        return asyncOPer;
-    }
-
-    public void asyncSave(Object obj) throws OperatorException {
-        asyncSave(obj, mAsyncOPer);
-    }
-
-    public void asyncUpdate(Object obj) {
-        asyncUpdate(obj, mAsyncOPer);
-    }
-
-    public void asyncExecuteSql(String sql) {
-        asyncExecuteSql(sql, mAsyncOPer);
-    }
-
-    public void asyncSave(Object obj, AsyncDbOperator op) throws OperatorException {
-        op.saveObject(obj);
-    }
-
-    public void asyncUpdate(Object obj, AsyncDbOperator op) {
-        if (isCanUseDBStore()) {
-            op.updateObj(obj);
+    public void close(Statement statement, boolean isTxError) {
+        try {
+            if (statement != null) {
+                Connection conn = statement.getConnection();
+                statement.close();
+                closeConnect(conn, isTxError);
+            }
+        } catch (SQLException e) {
+            logger.error("db error", e);
         }
     }
 
-    public void asyncExecuteSql(String sql, AsyncDbOperator op) {
-        if (isCanUseDBStore()) {
-            op.ExecuteSql(sql);
+    public <T> void update(T entity, BaseDao<T> dao) throws OperatorException {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        boolean isTxError = false;
+        try {
+            conn = dbConnector.getConnect();
+            ps = conn.prepareStatement(dao.SQL0_UPDATE_BY_ID);
+            dao.fillPreparedStatement(entity, ps);
+            ps.setLong(dao.getColumnCount(), dao.getEntityId(entity));
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            isTxError = isTxError(e);
+            throw new OperatorException(StatusCode.ERROR_DB, e);
+        } finally {
+            close(ps, conn, isTxError);
         }
     }
 
-    public int getAsyncWaitCount() {
-        if (mAsyncOPer != null) {
-            return mAsyncOPer.getWaitCount();
-        } else {
-            return 0;
+    /**
+     * 更新entity中指定的列到数据库
+     */
+    public <T> void update(T entity, BaseDao dao, Column... columns) throws OperatorException {
+        StringBuilder sb = new StringBuilder(32);
+        for (Column column : columns) {
+            sb.append(column.name);
+            sb.append('=');
+            sb.append(SqlDefender.format(column.getEntityValue(entity)));
+            sb.append(',');
+        }
+        if (sb.length() > 0) {
+            sb.deleteCharAt(sb.length() - 1);
+            String sql = String.format("update %1$s set %2$s where id=%3$s",
+                    dao.getTableName(), sb.toString(), dao.getEntityId(entity));
+            executeSql(sql);
         }
     }
 
-    public void updateExclude(BaseDao dao, Object obj, Set<Column> excludes) throws OperatorException {
+    /**
+     * 更新entity的未在excludes中指定的列到数据库
+     */
+    public <T> void updateExclusive(T entity, BaseDao dao, Set<Column> excludes) throws OperatorException {
         StringBuilder sb = new StringBuilder();
         final List<Column> columns = dao.getColumns();
-        try {
-            for (Column column : columns) {
-                if (!excludes.contains(column)) {
-                    Object val = column.getEntityValue(obj);
-                    if (val != null) {
-                        sb.append(column.getName());
-                        sb.append("=");
-                        val = getDBValue(val) + ",";
-                    }
-                    sb.append(val);
-                }
+        for (Column column : columns) {
+            if (!excludes.contains(column)) {
+                sb.append(column.name);
+                sb.append('=');
+                sb.append(SqlDefender.format(column.getEntityValue(entity)));
+                sb.append(',');
             }
-        } catch (Exception e) {
-            throw new OperatorException(StatusCode.ERROR_SERVER, e);
         }
-        if (sb.length() > 0) sb.deleteCharAt(sb.length() - 1);
-        String sql = String.format("update %1$s set %2$s where %3$s=%4$s",
-                dao.getTableName(), sb.toString(),
-                IDao.TABLE_ID, dao.getEntityId(obj));
+        if (sb.length() > 0) {
+            sb.deleteCharAt(sb.length() - 1);
+        }
+        String sql = String.format("update %1$s set %2$s where id=%3$s",
+                dao.getTableName(), sb.toString(), dao.getEntityId(entity));
         executeSql(sql);
     }
 
@@ -393,15 +302,18 @@ public class DBHelper {
         executeSql(sql);
     }
 
-    public void delete(BaseDao dao, Object obj) throws OperatorException {
+    public <T> void delete(BaseDao<T> dao, T obj) throws OperatorException {
         long id = dao.getEntityId(obj);
         delete(dao, id);
     }
 
-    public void delete(BaseDao dao, long id) throws OperatorException {
-        delete(dao, IDao.TABLE_ID + "=" + id);
+    public <T> void delete(BaseDao<T> dao, long id) throws OperatorException {
+        delete(dao, "id=" + id);
     }
 
+    /**
+     * 清空表
+     */
     public void clear(BaseDao dao) throws OperatorException {
         executeSql("delete from " + dao.getTableName());
     }
@@ -409,34 +321,34 @@ public class DBHelper {
     public void executeQuery(String sql, IDataReader reader) throws OperatorException {
         Statement stat = null;
         Connection conn = null;
+        boolean isTxError = false;
         try {
             conn = dbConnector.getConnect();
             stat = conn.createStatement();
             ResultSet rs = stat.executeQuery(sql);
             reader.read(rs);
         } catch (SQLException e) {
-            setDBException(e);
-            logger.error("db error", e);
+            isTxError = isTxError(e);
             throw new OperatorException(StatusCode.ERROR_DB, e);
         } finally {
-            close(stat, conn);
+            close(stat, conn, isTxError);
         }
     }
 
     public int executeSql(String sql) throws OperatorException {
         Connection conn = null;
         Statement stat = null;
-        int rc = 0;
+        boolean isTxError = false;
+        int rc;
         try {
             conn = dbConnector.getConnect();
             stat = conn.createStatement();
             rc = stat.executeUpdate(sql);
         } catch (SQLException e) {
-            setDBException(e);
-            logger.error("db error", e);
+            isTxError = isTxError(e);
             throw new OperatorException(StatusCode.ERROR_DB, e);
         } finally {
-            close(stat, conn);
+            close(stat, conn, isTxError);
         }
         return rc;
     }
@@ -444,22 +356,22 @@ public class DBHelper {
     public long queryLong(String sql) throws OperatorException {
         long rc = 0;
         Statement stat = null;
+        boolean isTxError = false;
         if (sql != null) {
             Connection conn = null;
             ResultSet rs = null;
             try {
-                conn = openConnect();
+                conn = dbConnector.getConnect();
                 stat = conn.createStatement();
                 rs = stat.executeQuery(sql);
                 if (rs.next()) {
                     rc = rs.getLong(1);
                 }
             } catch (SQLException e) {
-                setDBException(e);
-                logger.error("db error", e);
+                isTxError = isTxError(e);
                 throw new OperatorException(StatusCode.ERROR_DB, e);
             } finally {
-                close(stat, conn);
+                close(stat, conn, isTxError);
             }
         }
         return rc;
@@ -468,79 +380,66 @@ public class DBHelper {
     public String queryString(String sql) throws OperatorException {
         String rt = null;
         Statement stat = null;
+        boolean isTxError = false;
         if (sql != null) {
             Connection conn = null;
             ResultSet rs = null;
             try {
-                conn = openConnect();
+                conn = dbConnector.getConnect();
                 stat = conn.createStatement();
                 rs = stat.executeQuery(sql);
                 if (rs.next()) {
                     rt = rs.getString(1);
                 }
             } catch (SQLException e) {
-                setDBException(e);
-                logger.error("db error", e);
+                isTxError = isTxError(e);
                 throw new OperatorException(StatusCode.ERROR_DB, e);
             } finally {
-                close(stat, conn);
+                close(stat, conn, isTxError);
             }
         }
         return rt;
     }
 
-    public static Object getDBValue(Object objValue) {
-        if (objValue != null) {
-            if (objValue instanceof Boolean) {
-                if (((Boolean) objValue).booleanValue()) {
-                    return 1;
+    public <T> void saveOrUpdateBatch(BaseDao<T> dao, List<T> entityList) throws OperatorException {
+        if (entityList == null || entityList.size() == 0) {
+            return;
+        }
+        PreparedStatement psSave = null;
+        PreparedStatement psUpdate = null;
+        boolean isTxError = false;
+        Connection conn = null;
+        ResultSet rs;
+        try {
+            conn = dbConnector.getConnect();
+            long id;
+            for (T entity : entityList) {
+                if((id = dao.getEntityId(entity)) > 0) {
+                    if(psUpdate == null) {
+                        psUpdate = conn.prepareStatement(dao.SQL0_UPDATE_BY_ID);
+                    }
+                    dao.fillPreparedStatement(entity, psUpdate);
+                    psUpdate.setLong(dao.getColumnCount(), id);
+                    psUpdate.executeUpdate();
                 } else {
-                    return 0;
+                    if(psSave == null) {
+                        psSave = conn.prepareStatement(dao.SQL0_SAVE, PreparedStatement.RETURN_GENERATED_KEYS);
+                    }
+                    dao.fillPreparedStatement(entity, psSave);
+                    psSave.executeUpdate();
+                    rs = psSave.getGeneratedKeys();
+                    if (rs.next()) {
+                        dao.setEntityId(entity, rs.getLong(1));
+                    }
                 }
-            } else if (objValue instanceof Date) {
-                return ((Date) objValue).getTime();
-            } else if (objValue instanceof String) {
-                String value = (String) objValue;
-                value = formatSqlValue(value);
-                return "'" + value + "'";
-            } else {
-                throw new RuntimeException("Unsupported type: " + objValue.getClass().getName());
             }
-        }
-        return null;
-    }
-
-    public static String formatSqlValue(String value) {
-        String result = value;
-        result = result.replace("\\", "\\\\");
-        result = result.replace("'", "\\'");
-        result = filterEmoji(result);
-
-        return result;
-    }
-
-    public static String filterEmoji(String source) {
-        if (source != null) {
-            Pattern emoji = mEmoji;
-            Matcher emojiMatcher = emoji.matcher(source);
-            if (emojiMatcher.find()) {
-                source = emojiMatcher.replaceAll("");
-                return source;
-            }
-            return source;
-        }
-        return null;
-    }
-
-    public void saveOrUpdateBatch(BaseDao dao, List<?> objs) throws OperatorException {
-        if (objs != null && objs.size() > 0) {
-            //TODO 使用PreparedStatement方式效率更高
-            long beginTime = System.currentTimeMillis();
-            final List<String> sqls = buildSaveOrUpdateSqls(dao, objs);
-            executeSqlBatch(sqls);
-            long endTime = System.currentTimeMillis();
-            logger.debug("beginTime:" + beginTime + ", endTime:"
-                    + endTime + ", timeTake: " + (endTime - beginTime) + ", size:" + objs.size());
+        } catch (SQLException e) {
+            isTxError = isTxError(e);
+            throw new OperatorException(StatusCode.ERROR_DB, e);
+        } finally {
+            closeStatement(psSave);
+            closeStatement(psUpdate);
+            closeConnect(conn, isTxError);
         }
     }
 
@@ -548,9 +447,10 @@ public class DBHelper {
         if (sqls != null && sqls.size() > 0) {
             Statement stat = null;
             Connection conn = null;
+            boolean isTxError = false;
             try {
                 beginTransact();
-                conn = openConnect();
+                conn = dbConnector.getConnect();
                 stat = conn.createStatement();
                 for (String sql : sqls) {
                     stat.addBatch(sql);
@@ -559,24 +459,23 @@ public class DBHelper {
                 endTransact();
             } catch (SQLException e) {
                 transactRollback();
-                setDBException(e);
-                logger.error("db error", e);
+                isTxError = isTxError(e);
                 throw new OperatorException(StatusCode.ERROR_DB, e);
             } finally {
-                close(stat, conn);
+                close(stat, conn, isTxError);
             }
         }
     }
 
     private List<String> buildSaveOrUpdateSqls(BaseDao dao, List<?> objs) throws OperatorException {
-        List<String> sqls = new ArrayList<String>(objs.size());
+        List<String> sqls = new ArrayList<>(objs.size());
         String sql;
         for (Object obj : objs) {
             long id = dao.getEntityId(obj);
             if (id > 0) {
-                sql = buildUpdateSql(dao, obj);
+                sql = buildUpdateSql(obj, dao);
             } else {
-                sql = buildSaveSql(dao, obj);
+                sql = buildSaveSql(obj, dao);
             }
             if (sql != null) {
                 sqls.add(sql);
@@ -585,52 +484,36 @@ public class DBHelper {
         return sqls;
     }
 
-    public static String buildUpdateSql(BaseDao dao, Object obj) throws OperatorException {
+    public static <T> String buildUpdateSql(T entity, BaseDao<T> dao) throws OperatorException {
         StringBuilder sb = new StringBuilder();
-        long id = dao.getEntityId(obj);
+        long id = dao.getEntityId(entity);
         final List<Column> columns = dao.getColumns();
         if(columns.size() > 0) {
-            try {
-                for (Column column : columns) {
-                    Object val = column.getEntityValue(obj);
-                    if (val != null) {
-                        sb.append(column.getName());
-                        sb.append("=");
-                        val = getDBValue(val) + ",";
-                    }
-                    sb.append(val);
-                }
-            } catch (Exception e) {
-                throw new OperatorException(StatusCode.ERROR_SERVER, e);
+            for (Column column : columns) {
+                sb.append(column.name);
+                sb.append('=');
+                sb.append(SqlDefender.format(column.getEntityValue(entity)));
+                sb.append(',');
             }
-            if (sb.length() > 0) sb.deleteCharAt(sb.length() - 1);
-            return String.format("update %1$s set %2$s where %3$s=%4$s",
-                    dao.getTableName(), sb.toString(), IDao.TABLE_ID, id);
+            sb.deleteCharAt(sb.length() - 1);
+            return String.format("update %1$s set %2$s where id=%3$s",
+                    dao.getTableName(), sb.toString(), id);
         } else {
             return null;
         }
     }
 
-
-    public static String buildSaveSql(BaseDao dao, Object obj) throws OperatorException {
+    public static <T> String buildSaveSql(T entity, BaseDao<T> dao) throws OperatorException {
         StringBuilder sb = new StringBuilder();
         final List<Column> columns = dao.getColumns();
         if(columns.size()> 0) {
-            try {
-                for (Column column : columns) {
-                    Object objValue = column.getEntityValue(obj);
-                    if (objValue != null) {
-                        sb.append(getDBValue(objValue) + ",");
-                    } else {
-                        sb.append("null,");
-                    }
-                }
-                sb.deleteCharAt(sb.length()-1);
-                return String.format("insert into %1$s(%2$s) values (%3$s)",
-                        dao.getTableName(), dao.COLUMNS_STRING, sb.toString());
-            } catch (Exception e) {
-                throw new OperatorException(StatusCode.ERROR_SERVER, e);
+            for (Column column : columns) {
+                sb.append(SqlDefender.format(column.getEntityValue(entity)));
+                sb.append(',');
             }
+            sb.deleteCharAt(sb.length()-1);
+            return String.format("insert into %1$s(%2$s) values (%3$s)",
+                    dao.getTableName(), dao.COLUMNS_STRING, sb.toString());
         } else {
             return null;
         }
@@ -677,36 +560,69 @@ public class DBHelper {
         ResultSet rs = null;
         Statement stat = null;
         TableData td = null;
+        boolean isTxError = false;
 
         try {
-            conn = openConnect();
+            conn = dbConnector.getConnect();
             stat = conn.createStatement();
             rs = stat.executeQuery(sql);
+
             ResultSetMetaData meta = rs.getMetaData();
-            int colCount = meta.getColumnCount();
+            int columnCount = meta.getColumnCount();
 
             td = new TableData();
-            td.heads = new String[colCount];
+            td.heads = new String[columnCount];
             td.datas = new ArrayList<>();
-            for (int i = 1; i <= colCount; i++) {
+            for (int i = 1; i <= columnCount; i++) {
                 td.heads[i - 1] = meta.getColumnLabel(i);
             }
 
             Object[] row;
             while (rs.next()) {
-                row = new Object[colCount];
-                for (int i = 1; i <= colCount; i++) {
+                row = new Object[columnCount];
+                for (int i = 1; i <= columnCount; i++) {
                     row[i - 1] = rs.getObject(i);
                 }
                 td.datas.add(row);
             }
         } catch (SQLException e) {
-            setDBException(e);
-            logger.error("db error", e);
+            isTxError = isTxError(e);
             throw new OperatorException(StatusCode.ERROR_DB, e);
         } finally {
-            close(stat, conn);
+            close(stat, conn, isTxError);
         }
         return td;
+    }
+
+    public PreparedStatement prepareStatement(String sql) throws OperatorException {
+        Connection conn = null;
+        boolean isTxError = false;
+        try {
+            conn = dbConnector.getConnect();
+            return conn.prepareStatement(sql);
+        } catch (SQLException e) {
+            isTxError = isTxError(e);
+            throw new OperatorException(StatusCode.ERROR_DB, e);
+        } finally {
+            if(isTxError) {
+                closeConnect(conn, true);
+            }
+        }
+    }
+
+    public Statement createStatement() throws OperatorException {
+        Connection conn = null;
+        boolean isTxError = false;
+        try {
+            conn = dbConnector.getConnect();
+            return conn.createStatement();
+        } catch (SQLException e) {
+            isTxError = isTxError(e);
+            throw new OperatorException(StatusCode.ERROR_DB, e);
+        } finally {
+            if(isTxError) {
+                closeConnect(conn, true);
+            }
+        }
     }
 }

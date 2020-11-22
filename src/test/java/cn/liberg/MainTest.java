@@ -10,7 +10,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
-@Suite.SuiteClasses({UserServiceTest.class, JoinQueryTest.class})
+@Suite.SuiteClasses({UserDaoTest.class, JoinQueryTest.class})
 public class MainTest {
 
     @BeforeClass
@@ -18,5 +18,7 @@ public class MainTest {
         IDataBaseConf dbConfig = new DBConfig();
         DBHelper.self().init(new DBImpl(dbConfig));
     }
+
+
 
 }

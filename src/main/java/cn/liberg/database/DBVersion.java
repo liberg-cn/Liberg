@@ -1,7 +1,7 @@
 package cn.liberg.database;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -9,8 +9,15 @@ import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 负责创建{@code db_version}表，
+ * 维护和查询当前数据库的版本。
+ *
+ * @author Liberg
+ * @see DBVersionManager
+ */
 public final class DBVersion {
-    private static Log logger = LogFactory.getLog(DBVersion.class);
+    private static final Logger logger = LoggerFactory.getLogger(DBVersion.class);
     private static final String TABLE_NAME = "db_version";
     private static final String COLUMN_DB = "_db";
     private static final String COLUMN_CODE = "_version_code";
@@ -26,8 +33,10 @@ public final class DBVersion {
     }
 
     private static synchronized void initMap(Statement stat) {
-        if (map != null) return;
-        map = new HashMap<>();
+        if (map != null) {
+            return;
+        }
+        map = new HashMap<>(16);
         String sql = String.format("select %1$s,%2$s from %3$s", COLUMN_DB, COLUMN_CODE, TABLE_NAME);
         ResultSet rs = null;
         try {
@@ -35,7 +44,7 @@ public final class DBVersion {
             rs = stat.executeQuery(sql);
             String dbName;
             int code;
-            while (rs.next() == true) {
+            while (rs.next()) {
                 dbName = rs.getString(COLUMN_DB);
                 code = rs.getInt(COLUMN_CODE);
                 map.put(dbName, code);
@@ -53,9 +62,8 @@ public final class DBVersion {
     }
 
     private static void createTableIfAbsent(Statement stat) throws SQLException {
-        String sql = "create table  IF Not exists " + TABLE_NAME
-                + " (`"
-                + IDao.TABLE_ID + "` BIGINT primary key AUTO_INCREMENT,"
+        String sql = "create table if Not exists " + TABLE_NAME
+                + " (`id` BIGINT primary key AUTO_INCREMENT,"
                 + COLUMN_DB + " VARCHAR(255),"
                 + COLUMN_CODE + " BIGINT"
                 + ");";

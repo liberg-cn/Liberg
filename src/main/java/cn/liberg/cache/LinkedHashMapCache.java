@@ -1,9 +1,18 @@
 package cn.liberg.cache;
 
+/**
+ * 基于{@link java.util.LinkedHashMap}、实现{@link ICache}接口的LRU缓存
+ * @param <T>
+ *
+ * @author Liberg
+ */
 public class LinkedHashMapCache<T> implements ICache<T> {
 
     private LRUCache<String, T> lruCache;
 
+    /**
+     * @param capacity 指定缓存的容量限制
+     */
     public LinkedHashMapCache(int capacity) {
         lruCache = new LRUCache<>(capacity);
     }
@@ -28,6 +37,7 @@ public class LinkedHashMapCache<T> implements ICache<T> {
         return lruCache.size();
     }
 
+    @Override
     public int capacity() {
         return lruCache.capacity;
     }

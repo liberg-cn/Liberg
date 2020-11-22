@@ -2,14 +2,15 @@ package cn.liberg.support.data;
 
 import cn.liberg.database.IDataBaseConf;
 import cn.liberg.database.TableAlteration;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.lang.reflect.Method;
-import java.sql.SQLException;
 import java.sql.Statement;
 
 public class DBUpgrader extends DBImpl {
-    private Log logger = LogFactory.getLog(getClass());
+    private static final Logger logger = LoggerFactory.getLogger(DBUpgrader.class);
+
 
     public DBUpgrader(IDataBaseConf dbConf) {
         super(dbConf);

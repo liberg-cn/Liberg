@@ -1,11 +1,8 @@
-/*
- * First Created by LibergCoder@1.2.0
- */
 package cn.liberg.support.data.dao;
 
 import cn.liberg.database.BaseDao;
-import cn.liberg.database.query.Column;
-import cn.liberg.database.query.StringColumn;
+import cn.liberg.core.Column;
+import cn.liberg.core.StringColumn;
 import cn.liberg.support.data.entity.Role;
 
 import java.sql.PreparedStatement;
@@ -16,8 +13,9 @@ import java.util.List;
 
 public class RoleDao extends BaseDao<Role> {
     private static volatile RoleDao selfInstance;
-    public static final StringColumn columnName = new StringColumn("_name");
-    public static final StringColumn columnPermissions = new StringColumn("_permissions");
+
+    public static final Column<String> columnName = new StringColumn("name", "n");
+    public static final Column<String> columnPermissions = new StringColumn("permissions", "p");
 
     private RoleDao() {
         super("role");

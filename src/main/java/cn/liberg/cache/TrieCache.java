@@ -3,10 +3,12 @@ package cn.liberg.cache;
 import java.util.*;
 
 /**
- * 通过HashMap实现的字典树
+ * 通过HashMap实现的字典树Trie
  * 优点：速度快
  * 缺点：HashMap占用内存大
- * 适用于特定行业的词库，总词数不太大（比如2000以内，视可用内存而定）
+ * 适用于特定行业的词库，总词数不太大（比如3000以内，视可用内存而定）
+ *
+ * @author Liberg
  */
 public class TrieCache {
     private final Map<Character, Unit> root;

@@ -5,7 +5,7 @@ import cn.liberg.database.IDataBaseConf;
 public class DBConfig implements IDataBaseConf {
     private String driverName = "com.mysql.cj.jdbc.Driver";
     private String url = "jdbc:mysql://localhost:3306/";
-    private String dbName = "liberg_demo";
+    private String dbName = "liberg_test";
     private String userName = "root";
     private String password = "";
     private String charset = "utf8";

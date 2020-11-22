@@ -8,6 +8,4 @@ public class Role {
     public String name;
     @dbmap(length=5000)
     public String permissions;
-
-
 }

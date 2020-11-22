@@ -3,13 +3,17 @@ package cn.liberg.support.data;
 import cn.liberg.database.IDataBase;
 import cn.liberg.database.IDataBaseConf;
 import cn.liberg.database.TableBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import cn.liberg.support.data.dao.RoleDao;
+import cn.liberg.support.data.dao.UserDao;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.SQLException;
 import java.sql.Statement;
 
 public class DBImpl implements IDataBase {
-    private Log logger = LogFactory.getLog(getClass());
+    private static final Logger logger = LoggerFactory.getLogger(DBImpl.class);
+
     protected final IDataBaseConf dbConf;
     protected final int dbVersion = 1;
     protected final String dbName;
@@ -28,8 +32,8 @@ public class DBImpl implements IDataBase {
     @Override
     public void initData() {
         try {
-            DBInitializer initor = new DBInitializer();
-            initor.initData();
+            DBInitializer initializer = new DBInitializer();
+            initializer.initData();
         } catch (Exception e) {
             logger.error("initData failed...", e);
         }
@@ -57,18 +61,20 @@ public class DBImpl implements IDataBase {
     }
 
     protected void createTableRole(Statement stat) throws SQLException {
-        TableBuilder tb = new TableBuilder("role");
-        tb.add("_name", typeString(31), null);
-        tb.add("_permissions", typeText(), null);
+        TableBuilder tb = new TableBuilder(RoleDao.self().getTableName());
+        tb.add(RoleDao.columnName, typeString(31));
+        tb.add(RoleDao.columnPermissions, typeText());
         stat.executeUpdate(tb.build());
     }
 
     protected void createTableUser(Statement stat) throws SQLException {
-        TableBuilder tb = new TableBuilder("user");
-        tb.add("_name", true, typeString(), null);
-        tb.add("_password", typeString(), null);
-        tb.add("_role_id", typeLong(), null);
-        tb.add("_create_time", typeLong(), null);
+        UserDao dao = UserDao.self();
+        TableBuilder tb = new TableBuilder(dao.getTableName());
+        tb.add(dao.columnName, true, typeString());
+        tb.add(dao.columnPassword, typeString());
+        tb.add(dao.columnAge, typeByte());
+        tb.add(dao.columnRoleId, typeLong());
+        tb.add(dao.columnCreateTime, typeLong());
         stat.executeUpdate(tb.build());
     }
 

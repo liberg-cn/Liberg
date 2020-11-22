@@ -1,7 +1,8 @@
 package cn.liberg.database;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.mysql.cj.exceptions.MysqlErrorNumbers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -11,38 +12,62 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 
+/**
+ * 一个小巧的数据库连接池实现
+ *
+ * @author Liberg
+ */
 public class DBConnector {
-    private Log logger = LogFactory.getLog(getClass());
-    private static int MAX_CONNECTION_COUNT = 1500;
-    private static int MAX_CONNECTION_FREE_TIME = 1 * 60 * 60 * 1000;
-    private final ArrayList<ConnectionInfo> mFreeConnections;
-    private final HashMap<String, Connection> mTranMap;
+    private static final Logger logger = LoggerFactory.getLogger(DBConnector.class);
 
-    private IDataBaseConf dbConf = null;
-    private int mCurrentCount = 0;
-    private int mMaxCount = 0;
+    private static int MAX_CONNECTION_COUNT = 1200;
+    private static int MAX_CONNECTION_FREE_TIME = 1 * 60 * 60 * 1000;
+
+    /**
+     * 保留空闲的连接
+     */
+    private final ArrayList<ConnectionInfo> freeList;
+
+    /**
+     * 处于事务中的连接单独保存到Map
+     * 一个事务的开始、提交、回滚必须在同一个连接中完成
+     */
+    private final HashMap<String, Connection> inTransactionMap;
+    private IDataBaseConf dbConf;
     private String connectUrl;
+    /**
+     * 当前连接数，包括空闲连接
+     */
+    private volatile int connectCount = 0;
+    /**
+     * 连接数达到的上限
+     */
+    private volatile int maxCount = 0;
 
     public DBConnector() {
-        mFreeConnections = new ArrayList<>();
-        mTranMap = new HashMap<>();
+        freeList = new ArrayList<>();
+        inTransactionMap = new HashMap<>();
     }
 
     private class ConnectionInfo {
-        public Connection mConnection = null;
-        public Long mLastUseTime = null;
+        public Connection connection;
+        public Long lastUseTime;
     }
 
     public int getConnectCount() {
-        int result = 0;
-        synchronized (mFreeConnections) {
-            result = mCurrentCount;
+        return connectCount;
+    }
+
+    public int getFreeCount() {
+        int freeCount;
+        synchronized (freeList) {
+            freeCount = freeList.size();
         }
-        return result;
+        return freeCount;
     }
 
     public int getMaxConnectCount() {
-        return mMaxCount;
+        return maxCount;
     }
 
     public void init(IDataBaseConf conf) {
@@ -52,48 +77,49 @@ public class DBConnector {
         StringBuilder sb = new StringBuilder(256);
         sb.append(url);
         if (!url.endsWith("/")) {
-            sb.append("/");
+            sb.append('/');
         }
         sb.append(dbConf.getDbName());
         sb.append("?useSSL=false&serverTimezone=UTC&characterEncoding=");
         sb.append(dbConf.getCharset());
         connectUrl = sb.toString();
 
-        // Load driver class, and try to create database if not exist
+        // Load jdbc driver class, and try to create database if absent
         tryConnect(dbConf);
     }
 
 
     public Connection getConnect() throws SQLException {
-        Connection con = null;
-        long threadId = Thread.currentThread().getId();
-        synchronized (mTranMap) {
-            con = mTranMap.get(Long.toString(threadId));
+        Connection con;
+        String threadId = Long.toString(Thread.currentThread().getId());
+        synchronized (inTransactionMap) {
+            con = inTransactionMap.get(threadId);
         }
         if (con == null) {
-            synchronized (mFreeConnections) {
-                while (mFreeConnections.size() > 0) {
-                    ConnectionInfo conInfo = mFreeConnections.remove(0);
-                    while (mFreeConnections.size() > 200) { //free too much
-                        ConnectionInfo freeConInfo = mFreeConnections.remove(0);
-                        freeConnection(freeConInfo.mConnection, true);
+            synchronized (freeList) {
+                while (freeList.size() > 0) {
+                    ConnectionInfo conInfo = freeList.remove(0);
+                    //free too much
+                    while (freeList.size() > 200) {
+                        ConnectionInfo freeConInfo = freeList.remove(0);
+                        freeConnection(freeConInfo.connection, true);
                     }
-                    if (!conInfo.mConnection.isClosed()) {
+                    if (!conInfo.connection.isClosed()) {
                         long now = (new Date()).getTime();
-                        if (now - conInfo.mLastUseTime <= MAX_CONNECTION_FREE_TIME) {
-                            con = conInfo.mConnection;
+                        if (now - conInfo.lastUseTime <= MAX_CONNECTION_FREE_TIME) {
+                            con = conInfo.connection;
                             break;
                         } else {
-                            freeConnection(conInfo.mConnection, true);
+                            freeConnection(conInfo.connection, true);
                         }
                     }
                 }
                 if (con == null) {
-                    if (mCurrentCount < MAX_CONNECTION_COUNT) {
+                    if (connectCount < MAX_CONNECTION_COUNT) {
                         con = DriverManager.getConnection(connectUrl, dbConf.getUserName(), dbConf.getPassword());
-                        mCurrentCount++;
-                        if (mCurrentCount > mMaxCount) {
-                            mMaxCount = mCurrentCount;
+                        connectCount++;
+                        if (connectCount > maxCount) {
+                            maxCount = connectCount;
                         }
                     } else {
                         throw new SQLException("Max connection count limited: " + MAX_CONNECTION_COUNT);
@@ -108,7 +134,7 @@ public class DBConnector {
         try {
             Class.forName(conf.getDriverName());
         } catch (Exception e) {
-            throw new IllegalArgumentException("Failed to load driver: " + conf.getDriverName(), e);
+            throw new IllegalArgumentException("Failed to load jdbc driver: " + conf.getDriverName(), e);
         }
 
         SQLException exception = null;
@@ -119,25 +145,28 @@ public class DBConnector {
             exception = e;
         }
         //1049 Unknown database
-        if (exception != null && exception.getErrorCode() == 1049) {
+        if (exception != null && exception.getErrorCode() == MysqlErrorNumbers.ER_BAD_DB_ERROR) {
             String dbName = conf.getDbName();
 
-            //kick off the database-name
-            String url = connectUrl.replace(dbName, "");
+            //kick off the database name
+            String url = connectUrl.replace('/' + dbName + '?', "/?");
             Connection conn = null;
             Statement stat = null;
             try {
                 conn = DriverManager.getConnection(url, dbConf.getUserName(), dbConf.getPassword());
                 stat = conn.createStatement();
                 createDatabase(stat, conf);
-                logger.info("Database created: " + dbName);
+                logger.info("Database created: {}", dbName);
             } catch (SQLException e) {
-                logger.error(e);
                 throw new IllegalArgumentException("Failed to connect: " + url);
             } finally {
                 try {
-                    if (conn != null) stat.close();
-                    if (stat != null) conn.close();
+                    if (conn != null) {
+                        stat.close();
+                    }
+                    if (stat != null) {
+                        conn.close();
+                    }
                 } catch (SQLException e) {
                 }
             }
@@ -145,25 +174,29 @@ public class DBConnector {
     }
 
     public void freeConnection(Connection connection, boolean forceClose) {
-        long threadId = Thread.currentThread().getId();
-        synchronized (mTranMap) {
-            if (mTranMap.containsKey(Long.toString(threadId))) {
+        if (connection == null) {
+            return;
+        }
+        final String threadId = Long.toString(Thread.currentThread().getId());
+        synchronized (inTransactionMap) {
+            if (inTransactionMap.containsKey(threadId)) {
+                // 处于事务中的连接应由endTransact/transactRollback完成释放
                 return;
             }
         }
-        synchronized (mFreeConnections) {
+        synchronized (freeList) {
             if (forceClose) {
                 try {
                     connection.close();
-                    mCurrentCount--;
+                    connectCount--;
                 } catch (SQLException e) {
-                    logger.error("connection close error", e);
+                    logger.error("Connection close error", e);
                 }
             } else {
                 ConnectionInfo info = new ConnectionInfo();
-                info.mConnection = connection;
-                info.mLastUseTime = (new Date()).getTime();
-                mFreeConnections.add(info);
+                info.connection = connection;
+                info.lastUseTime = System.currentTimeMillis();
+                freeList.add(info);
             }
         }
     }
@@ -171,18 +204,17 @@ public class DBConnector {
     public void beginTransact() throws SQLException {
         Connection connect = getConnect();
         connect.setAutoCommit(false);
-        long threadId = Thread.currentThread().getId();
-        synchronized (mTranMap) {
-            mTranMap.put(Long.toString(threadId), connect);
+        final String threadId = Long.toString(Thread.currentThread().getId());
+        synchronized (inTransactionMap) {
+            inTransactionMap.put(threadId, connect);
         }
-
     }
 
     public void transactRollback() throws SQLException {
         Connection con = null;
-        long threadId = Thread.currentThread().getId();
-        synchronized (mTranMap) {
-            con = mTranMap.remove(Long.toString(threadId));
+        final String threadId = Long.toString(Thread.currentThread().getId());
+        synchronized (inTransactionMap) {
+            con = inTransactionMap.remove(threadId);
         }
         if (con != null) {
             try {
@@ -196,9 +228,9 @@ public class DBConnector {
 
     public void endTransact() throws SQLException {
         Connection con = null;
-        long threadId = Thread.currentThread().getId();
-        synchronized (mTranMap) {
-            con = mTranMap.remove(Long.toString(threadId));
+        final String threadId = Long.toString(Thread.currentThread().getId());
+        synchronized (inTransactionMap) {
+            con = inTransactionMap.remove(threadId);
         }
         if (con != null) {
             try {
@@ -212,14 +244,26 @@ public class DBConnector {
 
     public void freeAllConnection(Connection connect) {
         freeConnection(connect, true);
-        synchronized (mFreeConnections) {
-            while (mFreeConnections.size() > 0) {
-                ConnectionInfo conInfo = mFreeConnections.remove(0);
-                freeConnection(conInfo.mConnection, true);
+        if(freeList.size() > 0) {
+            synchronized (freeList) {
+                while (freeList.size() > 0) {
+                    ConnectionInfo conInfo = freeList.remove(0);
+                    freeConnection(conInfo.connection, true);
+                }
             }
         }
     }
 
+    public void freeAllConnection() {
+        if(freeList.size() > 0) {
+            synchronized (freeList) {
+                while (freeList.size() > 0) {
+                    ConnectionInfo conInfo = freeList.remove(freeList.size()-1);
+                    freeConnection(conInfo.connection, true);
+                }
+            }
+        }
+    }
 
     private void createDatabase(Statement stat, IDataBaseConf conf) throws SQLException {
         StringBuilder sb = new StringBuilder(128);

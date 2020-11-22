@@ -6,31 +6,42 @@ import cn.liberg.core.PeriodicThread;
 import java.util.Iterator;
 import java.util.Map;
 
+/**
+ * 会话管理器
+ *
+ * @author Liberg
+ */
 public class SessionManager {
-    private static SessionManager self = null;
-    /* 15天后session自动过期，需要重新登录 */
-    private static long EXPIRED_MILLIS = 15 * 24 * 60 * 60 * 1000L;
-    /* session过期前10分钟内，告诉前端session不可用，需要重新登录 */
-    private static long RESERVE_MILLIS = 10 * 60 * 1000L;
-    private static long USABLE_DURATION = EXPIRED_MILLIS - RESERVE_MILLIS;
-    /* 每10分钟清理一次过期的session */
-    private static int EVICT_INTERVAL_MILLIS = 10 * 60 * 1000;
+    private static volatile SessionManager selfInstance = null;
+    /**
+     *  默认24小时后session自动过期，需要重新登录
+     */
+    private long expiredMillis = 24 * 60 * 60 * 1000L;
+    /**
+     *  session过期前10分钟内，设置为不再可用，需要重新登录
+     */
+    private long reserveMillis = 10 * 60 * 1000L;
+    private long usableDuration = expiredMillis - reserveMillis;
+    /**
+     *  每5分钟清理一次过期的session
+     */
+    private int evictIntervalMillis = 5 * 60 * 1000;
 
-    private final LRUCache<String, SessionItem> cache;
     private final byte[] lock = new byte[0];
+    private final LRUCache<String, SessionItem> cache;
+    private final PeriodicThread pThread;
     private int maxCount = 0;
-    private PeriodicThread pThread;
 
-    public static void resetParams(long expiredMillis, long reserveMillis, int evictIntervalMillis) {
-        EXPIRED_MILLIS = expiredMillis;
-        RESERVE_MILLIS = reserveMillis;
-        USABLE_DURATION = expiredMillis - reserveMillis;
-        EVICT_INTERVAL_MILLIS = evictIntervalMillis;
+    public void setMillis(long expired, long reserve, int evictInterval) {
+        expiredMillis = expired;
+        reserveMillis = reserve;
+        usableDuration = expired - reserve;
+        evictIntervalMillis = evictInterval;
     }
 
     public SessionManager() {
         cache = new LRUCache<>(Integer.MAX_VALUE >> 1);
-        pThread = new PeriodicThread("AbstractSessionManagerThread", () -> {
+        pThread = new PeriodicThread("SessionManagerThread", () -> {
             Map.Entry<String, SessionItem> entry;
             SessionItem session;
             long nowTime = System.currentTimeMillis();
@@ -40,29 +51,26 @@ public class SessionManager {
                     entry = iterator.next();
                     session = entry.getValue();
                     session.uid = null;
-                    if (nowTime - session.startTimeMillis >= EXPIRED_MILLIS) {
+                    if (nowTime - session.startTimeMillis >= expiredMillis) {
                         iterator.remove();
                     } else {
                         break;
                     }
                 }
             }
-        }, EVICT_INTERVAL_MILLIS);
+        }, evictIntervalMillis);
         pThread.start();
     }
 
     public static SessionManager self() {
-        if (self == null) {
-            self = getInstanceSingle();
+        if (selfInstance == null) {
+            synchronized (SessionManager.class) {
+                if (selfInstance == null) {
+                    selfInstance = new SessionManager();
+                }
+            }
         }
-        return self;
-    }
-
-    private static synchronized SessionManager getInstanceSingle() {
-        if (self == null) {
-            self = new SessionManager();
-        }
-        return self;
+        return selfInstance;
     }
 
     public void put(SessionItem session) {
@@ -109,6 +117,7 @@ public class SessionManager {
 
     public boolean isUsable(String uid) {
         SessionItem item = get(uid);
-        return item != null && (System.currentTimeMillis() - item.startTimeMillis < USABLE_DURATION);
+        return item != null
+                && (System.currentTimeMillis() - item.startTimeMillis < usableDuration);
     }
 }

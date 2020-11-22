@@ -1,5 +1,9 @@
 package cn.liberg.annotation;
 
+/**
+ * @author Liberg
+ */
+
 public enum JsshowType {
     input,
     input_number,

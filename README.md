@@ -1,37 +1,109 @@
 # Liberg
     A high-performance and lightweight suites for spring-boot-based web development.
 
+`Liberg`为从零基础小白到中高级`Java Web`开发者提供一站式的极速开发体验和解决方案。
+
+包含`Liberg`库（`Jar`）和`LibergCoder`（`Idea插件Jar`）两部分。
+
+### 特点
+
+1. `Liberg`是第一个真正实现“**零反射**”的Java `ORM`框架（就笔者个人了解到的情况而言）。
+
+   **反射**赋予了Java动态编程的能力。通过反射可以在运行时通过类名称（全限定类名）动态地创建对象、获取对象的属性和方法、为对象赋予新的属性值、调用对象中的方法等等。利用Java的反射机制，动态地创建对象、为对象属性赋值，就可以很容易地实现将数据表中的一条记录转换为一个Java实体类的对象。可以肯定的是，几乎所有`ORM`（Object Relational Mapping）框架就就是这个套路。差别不过是在反射的基础上做了多大程度的优化。
+
+   反射有什么问题？**慢**。
+
+   利用`LibergCoder`生成代码，`Liberg`真正做到了实体关系映射上的“**零反射**”。因此，可以说`Liberg`是一个极轻量级的`ORM`框架。
+
+2. 极速开发：创建最少的文件、写最少的代码。
+
+   很多需要手动创建的代码、配置文件，`LibergCoder`自动完成创建和维护。在`LibergCoder`插件的加持下，实现了完全自动化的`Spring Boot Web`项目初始化，包括`yml`配置创建、`pom.xml`依赖添加、数据库创建、数据表创建、表结构升级等等。
+
+   `LibergCoder`会创建和维护必要的支撑代码，开发者只写业务：**定义实体类、定义`API`接口、编写业务方法的具体实现**。
+
+   **让开发者创建最少的文件、写最少的代码**。这是`Liberg`项目的不懈追求。
+
+3. 最接近`SQL`的代码风格。这里指数据查询和更新的一些代码。
+
+   举几个例子，体会一下：
+
+   ```java
+   // 以下演示代码位于UserDao.java文件
+   
+   // 演示查询操作：查询用户名为name，或者密码为xxx并且年龄大于30的一条记录，
+   // 返回一个User对象
+   return select()
+           .whereEq(columnName, name)
+           .or()
+           .eq(columnPassword, "xxx")
+           .gt(columnAge, 30)
+           .one();
+   
+   // 只查询用户名这一列，按id列降序，返回一个List<String>对象
+   return select(columnName)
+           .whereGt(columnId, 0)
+           .eq(columnNickName, nickName)
+           .desc(columnId)
+           .all();
+   
+   // prepare方式的预编译查询：这里演示只查询用户名
+   final PreparedSelectWhere<String> psw = prepareSelect(columnName)
+       .whereGe$(columnId)
+       .eq$(columnAge);
+   
+   try (final PreparedSelectExecutor<String> prepare = psw.prepare()) {
+       // 填充条件参数
+       prepare.setParameter(columnId, 1);
+       prepare.setParameter(columnAge, 10);
+       // 第一次查询
+       prepare.one();
+       
+       // 填充条件参数
+       prepare.setParameter(columnId, 2);
+       prepare.setParameter(columnAge, 30);
+       // 再次查询
+       prepare.one();
+   }
+   
+   // 演示更新操作：更新用户名、密码、增大年龄，通过id相等条件
+   update().set(columnName, newName)
+           .set(columnPassword, newPassword)
+           .increment(columnAge, ageIncrement)
+           .whereEq(columnId, id)
+           .execute();
+   ```
+
+   
+
+`Liberg` + `LibergCoder` `==` 零反射的`ORM`框架 `+` 代码自动化工具
 
 
-Liberg为从零基础小白到中高级Java Web开发者提供一站式的极速解决方案。由Liberg库（jar）和LibergCoder插件（Idea版）构成。
 
-> Liberg库，提供了一个极轻量级的`ORM`（Object Relational Mapping）、以及一些Web项目支撑代码。 
->
-> 为什么如此轻量级？
->
-> 是因为借助LibergCoder自动生成代码，实现了**非反射的ORM**。
-
-
-
-**特别说明：**由于Github在国内访问太慢，相关文档和资源优先在网站[liberg.cn](http://liberg.cn/)进行更新。
+**特别说明：** 由于`Github`在国内访问太慢，相关文档和资源优先在网站[liberg.cn](http://liberg.cn/)进行更新。
 
 
 
 ### Web系统设计理念
 
-Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统。
+从外部视角来看，**Web系统=数据+功能**，因此`Liberg`围绕“**数据**”和“**接口**”来设计和构架整个Web系统。
 
-**数据**：由`data.entity`包下的实体类进行承载，映射到数据库中的表。entity的一个字段映射为数据库表的一列。
+**数据**：由`data.entity`包下的实体类进行承载，映射到数据库中的表。entity的一个字段映射为数据库表的一列，通过注解设定为不映射成员除外。
 
-**接口**：由`service.interfaces`包下的接口声明类定义，映射为controller.api.XxxControllor，而XxxController是承接http请求的入口。每一个接口方法，映射为一个接口uri。
+**接口**：由`service.interfaces`包下的接口声明类定义，映射为`controller.api.XxxControllor`和`service.XxxService`。
+
+其中，`XxxController`是承接`http`请求的入口。每一个接口方法，映射为一个接口`uri`。
+
+`XXXService`是实现业务逻辑、编写逻辑代码的地方。
+
+因此，基于`Liberg`来开发`Web`应用，开发者只需要定义好实体类、对外提供`API`的接口类，然后编写具体业务逻辑代码即可。其他支撑性的胶水代码由`LibergCoder`插件进行自动的创建和维护。
 
 
 
 ### 如何开始
 
-1. 在Idea中创建`Spring Initializr`项目，仅仅需要勾选Spring Web依赖。
+1. 在Idea中创建`Spring Initializr`项目，仅仅需要勾选`Spring Web`依赖。
 
-2. 安装Idea插件[LibergCoder.jar](https://github.com/liberg-cn/LibergCoder/blob/master/LibergCoder.jar)，安装完成，重启Idea，菜单栏末尾多出一个LibergCoder菜单。
+2. 安装Idea插件[LibergCoder.jar](https://github.com/liberg-cn/LibergCoder/blob/master/LibergCoder.jar)，安装完成，重启Idea，菜单栏末尾多出一个`LibergCoder`菜单。
 
 3. 项目中手动引入jar包：[liberg-1.2.0.jar](https://github.com/liberg-cn/Liberg/blob/master/target/liberg-1.2.0.jar)，引入方式见文末备注。
 
@@ -71,7 +143,7 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
 
    ```java
    public class User {
-       public long id; //每个实体类都要有一个long类型的id作为数据表的主键
+       public long id; //每个实体类都要有一个long类型的id作为数据表的自增主键
        @dbmap(isIndex=true) //isIndex为true表示需要给此列创建索引
        public String name;
        public String password;
@@ -82,11 +154,11 @@ Liberg围绕“**数据**”和“**接口**”来设计和开发整个Web系统
    }
    ```
 
-   在IDEA中打开`User.java`文件后，执行`LibergCoder--Build entity/interface...`，LibergCoder插件会解析此实体类，生成或修改相关的代码文件。比如：
+   在IDEA中打开`User.java`文件后，执行`LibergCoder--Build entity/interface...`，`LibergCoder`插件会解析此实体类，生成或修改相关的代码文件。比如：
 
    - 创建`data.dao.UserDao`类，用于支持对user表的CRUD操作。
    - 修改`data.DBImpl`加入user表的建表逻辑。
-   - 修改`User.java`文件，给每个字段增加@JSONField注解。
+   - 修改`User.java`文件，给每个字段增加`@JSONField`注解。
 
 6. **创建一个接口类，比如service/interfaces/IUserService.java**
 

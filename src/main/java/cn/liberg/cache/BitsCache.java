@@ -1,12 +1,15 @@
 package cn.liberg.cache;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+/**
+ * 一种位图实现方式。
+ * 比{@link java.util.BitSet}有优势？
+ *
+ * @author Liberg
+ */
 public class BitsCache {
-    Map<String, byte[]> bitsMap;//全量缓存到
+    Map<String, byte[]> bitsMap;
     private int byteCount;
     private int bitsCount;
     public static final byte[] MASK = {
@@ -53,7 +56,7 @@ public class BitsCache {
         synchronized (this) {
             byte[] bytes = bitsMap.get(key);
             if(bytes == null) {
-                bytes = new byte[byteCount];//default 0
+                bytes = new byte[byteCount];
                 bitsMap.put(key, bytes);
             }
             bytes[pos>>>3] |= MASK[pos&7];
@@ -64,7 +67,7 @@ public class BitsCache {
         synchronized (this) {
             byte[] bytes = bitsMap.get(key);
             if(bytes == null) {
-                bytes = new byte[byteCount];//default 0
+                bytes = new byte[byteCount];
                 bitsMap.put(key, bytes);
             }
             for(int pos : positions) {
@@ -83,7 +86,7 @@ public class BitsCache {
             for(String key : keys) {
                 byte[] bytes = bitsMap.get(key);
                 if(bytes == null) {
-                    bytes = new byte[byteCount];//default 0
+                    bytes = new byte[byteCount];
                     bitsMap.put(key, bytes);
                 }
                 bytes[idx] |= mask;
@@ -96,7 +99,7 @@ public class BitsCache {
         synchronized (this) {
             byte[] bytes = bitsMap.get(key);
             if(bytes == null) {
-                bytes = new byte[byteCount];//default 0
+                bytes = new byte[byteCount];
                 bitsMap.put(key, bytes);
             }
             bytes[pos>>>3] &= ~MASK[pos&7];
@@ -201,7 +204,8 @@ public class BitsCache {
     }
 
     public static boolean isSet(byte val, int index) {
-        int mask = MASK[index&7];//index的有效范围是0~7
+        //index的有效范围是0~7
+        int mask = MASK[index&7];
         return (val&mask) == mask;
     }
 

@@ -10,13 +10,13 @@ public interface IDataBase {
 
     /**
      * 获取数据库的名称
-     * @return 数据库名称
+     * @return
      */
     public String getName();
 
     /**
      * 获取数据库的当前版本
-     * @return 数据库当前版本
+     * @return
      */
     public int getCurrentVersion();
 
@@ -34,7 +34,8 @@ public interface IDataBase {
     public void createTable(Statement stat) throws SQLException;
 
     /**
-     * 实现数据库从dbVersion到newVersion的版本升级逻辑，升级内容包括结构和数据
+     * 实现数据库从dbVersion到newVersion的版本升级逻辑，
+     * 升级内容包括表结构升级和数据增删改
      * @param stat
      * @param dbVersion
      * @param newVersion
@@ -43,54 +44,52 @@ public interface IDataBase {
      */
     public int upgrade(Statement stat, int dbVersion, int newVersion) throws SQLException;
 
-    //
-
     /**
      * 此方法中完成数据库数据的初始化，比如创建一个超级管理员等
      */
     public void initData();
 
-    default public String typeByte() {
+    default String typeByte() {
         return "TINYINT NOT NULL DEFAULT 0";
     }
 
-    default public String typeByte(int defVal) {
+    default String typeByte(int defVal) {
         return "TINYINT NOT NULL DEFAULT " + defVal;
     }
 
-    default public String typeInt() {
+    default String typeInt() {
         return "INT NOT NULL DEFAULT 0";
     }
 
-    default public String typeInt(int defVal) {
+    default String typeInt(int defVal) {
         return "INT NOT NULL DEFAULT " + defVal;
     }
 
-    default public String typeLong() {
+    default String typeLong() {
         return "BIGINT NOT NULL DEFAULT 0";
     }
 
-    default public String typeLong(long defVal) {
+    default String typeLong(long defVal) {
         return "BIGINT NOT NULL DEFAULT " + defVal;
     }
 
-    default public String typeString(int len) {
+    default String typeString(int len) {
         return "VARCHAR(" + len + ") NULL";
     }
 
-    default public String typeString() {
+    default String typeString() {
         return "VARCHAR(255) NULL";
     }
 
-    default public String typeString(int len, String defVal) {
+    default String typeString(int len, String defVal) {
         return "VARCHAR(" + len + ") NOT NULL DEFAULT '" + defVal + "'";
     }
 
-    default public String typeString(String defVal) {
+    default String typeString(String defVal) {
         return "VARCHAR(255) NOT NULL DEFAULT '" + defVal + "'";
     }
 
-    default public String typeText() {
+    default String typeText() {
         return "TEXT DEFAULT NULL";
     }
 

@@ -1,0 +1,7 @@
+/target/classes
+/target/surefire-reports
+/target/test-classes
+/target/generated-sources
+/target/generated-test-sources
+/target/maven-archiver
+/target/maven-status

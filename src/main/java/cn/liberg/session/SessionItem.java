@@ -2,6 +2,9 @@ package cn.liberg.session;
 
 import cn.liberg.core.IdMaker;
 
+/**
+ * @author Liberg
+ */
 public class SessionItem {
     public String uid;
     public long startTimeMillis;

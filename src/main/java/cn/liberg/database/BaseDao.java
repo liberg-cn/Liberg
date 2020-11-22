@@ -1,58 +1,85 @@
 package cn.liberg.database;
 
+import cn.liberg.core.Column;
+import cn.liberg.core.IdColumn;
 import cn.liberg.core.OperatorException;
 import cn.liberg.core.StatusCode;
-import cn.liberg.database.query.*;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import cn.liberg.database.select.*;
+import cn.liberg.database.update.Update;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Set;
 
 /**
+ * 数据访问对象(Data Access Object)的抽象父类
+ *
  * @author Liberg
  */
 public abstract class BaseDao<T> {
-    private Log logger = LogFactory.getLog(getClass());
+    public static final DBHelper dbHelper = DBHelper.self();
+    protected final String tableName;
 
-    public static final LongColumn columnId = new LongColumn(IDao.TABLE_ID);
-    protected String tableName;
-    private DBHelper dbHelper;
+    /**
+     * id列
+     */
+    public final Column<Long> columnId = new IdColumn();
 
+    /**
+     * 不含id的列，在子类中进行初始化
+     */
     protected List<Column> columns;
 
     /**
-     * 含_id字段的字段总数
+     * 非id的其他字段，按顺序拼接的结果
+     */
+    public final String COLUMNS_STRING;
+
+    /**
+     * 非id的其他列，按照columnName=?顺序拼接的结果
+     */
+    public final String COLUMNS_UPDATE_STRING;
+
+    /**
+     * insert语句，不含id，因为id自动递增
+     * eg:
+     * insert into tableName(col1,col2,col3) values(?,?,?)
+     */
+    final String SQL0_SAVE;
+
+    /**
+     * 通过id进行查找的sql语句
+     * eg:
+     * select id,col1,col2,col3 from tableName where id=?
+     */
+    final String SQL0_GET_BY_ID;
+
+    /**
+     * 通过id进行update的sql语句
+     * eg:
+     * update tableName set col1=?,col2=?,col3=? where id=?
+     */
+    final String SQL0_UPDATE_BY_ID;
+
+    /**
+     * 字段总数
      */
     private int columnCount;
 
     /**
-     * 不含_id的表字段拼接结果
-     */
-    public String COLUMNS_STRING;
-
-    //insert into tableName(COLUMNS_STRING) values(?,?,?)
-    public String SQL0_SAVE;
-
-    //select _id,COLUMNS_STRING from tableName where _id=?
-    public String SQL0_GET_BY_ID;
-    //update tableName set col1=?,col2=?,col3=? where _id=?
-    public String SQL0_UPDATE_BY_ID;
-
-    private PreparedQueryBuilder getGtIdLimit;
-
-    /**
      * 供子类覆盖的钩子方法
+     * 从数据库还原的entity，可能需要进行
+     * 进一步字段填充或其他初始化处理。
+     *
      * @param entity
      * @throws OperatorException
      */
-    public void fillData(T entity) throws OperatorException {
+    public T fillData(T entity) throws OperatorException {
         //可能需要填充一些未映射(保存)到数据库的成员
+        return entity;
     }
 
     protected BaseDao(String tableName) {
@@ -63,37 +90,38 @@ public abstract class BaseDao<T> {
         columnCount = 1;
         for (Column column : getColumns()) {
             columnCount++;
-            sbColumns.append(column.getName());
-            sbColumns.append(",");
+            sbColumns.append(column.name);
+            sbColumns.append(',');
 
-            sb1.append(column.getName());
-            sb1.append("=");
-            sb1.append("?");
-            sb1.append(",");
+            sb1.append(column.name);
+            sb1.append("=?,");
 
-            sb2.append("?");
-            sb2.append(",");
+            sb2.append("?,");
         }
         sbColumns.deleteCharAt(sbColumns.length() - 1);
         sb1.deleteCharAt(sb1.length() - 1);
         sb2.deleteCharAt(sb2.length() - 1);
 
         COLUMNS_STRING = sbColumns.toString();
-        SQL0_GET_BY_ID = "select " + getFullColumnsString() + " from " + tableName
-                + " where " + IDao.TABLE_ID + "=?";
-        SQL0_SAVE = "insert into " + tableName + "(" + COLUMNS_STRING + ") values("
+        COLUMNS_UPDATE_STRING = sb1.toString();
+        SQL0_GET_BY_ID = "select id," + COLUMNS_STRING + " from " + tableName
+                + " where id=?";
+        SQL0_SAVE = "insert into " + tableName + "(" + sbColumns.toString() + ") values("
                 + sb2.toString() + ")";
-        SQL0_UPDATE_BY_ID = "update " + tableName + " set " + sb1.toString()
-                + " where " + IDao.TABLE_ID + "=?";
-        dbHelper = DBHelper.self();
+        SQL0_UPDATE_BY_ID = "update " + tableName + " set " + COLUMNS_UPDATE_STRING
+                + " where id=?";
     }
 
     /**
-     * notify us when data modified by any other applications
+     * notify us when entity updated by any other applications
      */
     public void notifyUpdated(long entityId) throws OperatorException {
 
     }
+
+    /**
+     * notify us when entity saved by any other applications
+     */
     public void notifySaved(long entityId) throws OperatorException{
 
     }
@@ -102,68 +130,37 @@ public abstract class BaseDao<T> {
         return tableName;
     }
 
-    public String getFullColumnsString() {
-        if (COLUMNS_STRING.length() > 0) {
-            return IDao.TABLE_ID + "," + COLUMNS_STRING;
-        } else {
-            return IDao.TABLE_ID;
-        }
+    /**
+     * 返回非id的其他字段，用,按顺序拼接的结果
+     */
+    public String getColumnsString() {
+        return COLUMNS_STRING;
     }
 
     public int getColumnCount() {
         return columnCount;
     }
 
-    public PreparedQueryBuilder buildQuery() {
-        return new PreparedQueryBuilder(this);
-    }
-
-    public PreparedPartialQueryBuilder buildQuery(Column... columns) {
-        return new PreparedPartialQueryBuilder(this, columns);
-    }
-
-    public PreparedColumnQueryBuilder buildQuery(Column column) {
-        return new PreparedColumnQueryBuilder(this, column);
-    }
-
-    public PreparedPartialUpdateBuilder buildUpdate(Column... columns) {
-        return new PreparedPartialUpdateBuilder(this, columns);
-    }
-
-    public PreparedColumnUpdateBuilder buildUpdate(Column column) {
-        return new PreparedColumnUpdateBuilder(this, column);
-    }
-
-    protected PreparedQuery prepare(PreparedQueryBuilder preparedBuilder) throws SQLException {
-        return dbHelper.prepare(preparedBuilder);
-    }
-
-    protected PreparedPartialQuery prepare(PreparedPartialQueryBuilder preparedBuilder) throws SQLException {
-        return dbHelper.prepare(preparedBuilder);
-    }
-
-    protected PreparedColumnQuery prepare(PreparedColumnQueryBuilder preparedBuilder) throws SQLException {
-        return dbHelper.prepare(preparedBuilder);
-    }
-
-    protected PreparedPartialUpdate prepare(PreparedPartialUpdateBuilder preparedBuilder) throws SQLException {
-        return dbHelper.prepare(preparedBuilder);
-    }
-
-    protected PreparedColumnUpdate prepare(PreparedColumnUpdateBuilder preparedBuilder) throws SQLException {
-        return dbHelper.prepare(preparedBuilder);
-    }
-
-    public abstract T buildEntity(ResultSet rs) throws SQLException;
-
+    /**
+     * 在子类中实现，将id设置到entity
+     */
     public abstract void setEntityId(T entity, long id);
-
+    /**
+     * 在子类中实现，从entity中取得id
+     */
     public abstract long getEntityId(T entity);
 
+    /**
+     * 在子类中实现，根据查询结果ResultSet构建entity
+     */
+    public abstract T buildEntity(ResultSet rs) throws SQLException;
+    /**
+     * 在子类中实现，根据entity的成员变量填充PreparedStatement
+     */
     protected abstract void fillPreparedStatement(T entity, PreparedStatement ps) throws SQLException;
 
     /**
-     * 返回非id的其他字段
+     * 在子类实现，返回非id的其他有列
      */
     public abstract List<Column> getColumns();
 
@@ -175,22 +172,49 @@ public abstract class BaseDao<T> {
         dbHelper.update(entity, this);
     }
 
-    public void update(Map<String, Object> values, String where) throws OperatorException {
-        StringBuilder sb = new StringBuilder(32);
-        for (Entry<String, Object> entry : values.entrySet()) {
-            sb.append(entry.getKey());
-            sb.append("=");
-            Object val = entry.getValue();
-            if (val != null) {
-                sb.append(DBHelper.getDBValue(val));
-            } else {
-                sb.append("null,");
-            }
+    /**
+     * 仅仅将entity的部分字段(由第二个参数columns指定)更新到数据库
+     * @param entity
+     * @param columns
+     * @throws OperatorException
+     */
+    public void update(T entity, Column... columns) throws OperatorException {
+        dbHelper.update(entity, this, columns);
+    }
+
+    /**
+     * 仅仅将entity的部分字段(除columns外的字段)更新到数据库
+     * @param entity
+     * @param columns
+     * @throws OperatorException
+     */
+    public void updateExclusive(T entity, Column... columns) throws OperatorException {
+        Set<Column> set = new HashSet<>();
+        for (Column column : columns) {
+            set.add(column);
         }
-        if (sb.length() > 0) {
-            sb.deleteCharAt(sb.length() - 1);
-            String sql = String.format("update %1$s set %2$s where %3$s", tableName, sb.toString(), where);
-            dbHelper.executeSql(sql);
+        dbHelper.updateExclusive(entity, this, set);
+    }
+
+    /**
+     * 批量新增或更新
+     * @param list
+     * @throws OperatorException
+     */
+    public void batchSaveOrUpdate(List<T> list) throws OperatorException {
+        DBHelper.self().beginTransact();
+        try {
+            for(T entity : list) {
+                if(getEntityId(entity) > 0) {
+                    update(entity);
+                } else {
+                    save(entity);
+                }
+            }
+            DBHelper.self().endTransact();
+        } catch (Exception e) {
+            DBHelper.self().transactRollback();
+            throw new OperatorException(StatusCode.ERROR_DB, e);
         }
     }
 
@@ -198,7 +222,7 @@ public abstract class BaseDao<T> {
         return dbHelper.getById(id, this);
     }
 
-    public T getByWhere(String where) throws OperatorException {
+    public T getOneByWhere(String where) throws OperatorException {
         StringBuilder sb = buildWhere(where);
         sb.append(" limit 1");
         return dbHelper.getBySql(sb.toString(), this);
@@ -208,33 +232,12 @@ public abstract class BaseDao<T> {
         StringBuilder sb = buildWhere(where);
         sb.append(" limit ");
         sb.append((pageNum - 1) * pageSize);
-        sb.append(",");
+        sb.append(',');
         sb.append(pageSize);
         return dbHelper.getAllBySql(sb.toString(), this);
     }
 
-    /**
-     * 查询Id比gtId大的limit条数据
-     * @param gtId 查询Id比gtId大的数据
-     * @param limit 查询记录条数上限
-     * @return 数据记录列表，没有足够的数据时，返回数据列表的长度会小于limit
-     * @throws OperatorException
-     */
-    public List<T> getGtIdLimit(long gtId, int limit) throws OperatorException {
-        //TODO limit可以动态填充？
-        if(getGtIdLimit == null) {
-            getGtIdLimit = buildQuery().gt(columnId).limit(limit).asc(columnId);
-        }
-
-        try(PreparedQuery preparedQuery = prepare(getGtIdLimit)) {
-            preparedQuery.set(columnId, gtId);
-            return preparedQuery.all();
-        } catch (Exception e) {
-            throw new OperatorException(StatusCode.ERROR_DB, e);
-        }
-    }
-
-    public List<T> getAllByWhere(String where) throws OperatorException {
+    public List<T> getByWhere(String where) throws OperatorException {
         StringBuilder sb = buildWhere(where);
         return dbHelper.getAllBySql(sb.toString(), this);
     }
@@ -248,13 +251,18 @@ public abstract class BaseDao<T> {
         return dbHelper.getAllBySql(sb.toString(), this);
     }
 
+    public T getOne() throws OperatorException {
+        StringBuilder sb = buildWhere("1=1 limit 1");
+        return dbHelper.getBySql(sb.toString(), this);
+    }
+
     public int getCount() throws OperatorException {
-        String sql = "select count(1) from " + tableName;
+        String sql = "select count(*) from " + tableName;
         return (int) dbHelper.queryLong(sql);
     }
 
     public int getCount(String where) throws OperatorException {
-        String sql = "select count(1) from " + tableName;
+        String sql = "select count(*) from " + tableName;
         if (where != null && where.length() > 0) {
             sql += " where " + where;
         }
@@ -262,12 +270,12 @@ public abstract class BaseDao<T> {
     }
 
     public long getMaxId() throws OperatorException {
-        String sql = "select max(" + IDao.TABLE_ID + ") from " + tableName;
+        String sql = "select max(id) from " + tableName;
         return dbHelper.queryLong(sql);
     }
 
     public long getMinId() throws OperatorException {
-        String sql = "select min(" + IDao.TABLE_ID + ") from " + tableName;
+        String sql = "select min(id) from " + tableName;
         return dbHelper.queryLong(sql);
     }
 
@@ -283,54 +291,87 @@ public abstract class BaseDao<T> {
         dbHelper.clear(this);
     }
 
-    public T getEq(StringColumn field, String value) throws OperatorException {
-        return getByWhere(field.getName() + "='" + value + "'");
+    /**
+     * 实体对象异步save到数据库
+     */
+    public void asyncSave(Object obj) throws OperatorException {
+        dbHelper.asyncSqlExecutor.save(this, obj);
     }
 
-    public T getEq(IntegerColumn field, int value) throws OperatorException {
-        return getByWhere(field.getName() + "=" + value);
+    /**
+     * 实体对象异步update到数据库
+     */
+    public void asyncUpdate(Object obj) {
+        dbHelper.asyncSqlExecutor.update(this, obj);
     }
 
-    public T getEq(LongColumn field, long value) throws OperatorException {
-        return getByWhere(field.getName() + "=" + value);
+    /**
+     * 异步执行sql
+     */
+    public void asyncExecuteSql(String sql) {
+        dbHelper.asyncSqlExecutor.executeSql(sql);
     }
 
-    public T getNe(StringColumn field, String value) throws OperatorException {
-        return getByWhere(field.getName() + "<>'" + value + "'");
+    /**
+     * 查询 field=value的一条记录
+     */
+    public T getEq(Column<String> field, String value) throws OperatorException {
+        return getOneByWhere(field.name + "=" + SqlDefender.format(value));
     }
 
-    public T getNe(IntegerColumn field, int value) throws OperatorException {
-        return getByWhere(field.getName() + "<>" + value);
+    /**
+     * 查询 field=value的一条记录
+     */
+    public T getEq(Column<? extends Number> field, Number value) throws OperatorException {
+        return getOneByWhere(field.name + Condition.EQ + value);
     }
 
-    public T getNe(LongColumn field, long value) throws OperatorException {
-        return getByWhere(field.getName() + "<>" + value);
+    /**
+     * 查询 field like 'value'的一条记录
+     */
+    public T getLike(Column<String> field, String what) throws OperatorException {
+        return getOneByWhere(field.name + Condition.LIKE + SqlDefender.format(what));
     }
 
-    public T getLike(StringColumn field, String what) throws OperatorException {
-        return getByWhere(field.getName() + " like '" + what + "'");
+    /**
+     * 查询 field<>value的一条记录
+     */
+    public T getNe(Column<? extends Number> field, Number value) throws OperatorException {
+        return getOneByWhere(field.name + Condition.NE + value);
     }
 
-    public T getGe(IntegerColumn field, int value) throws OperatorException {
-        return getByWhere(field.getName() + ">=" + value);
+    /**
+     * 查询 field>value的一条记录
+     */
+    public T getGt(Column<? extends Number> field, Number value) throws OperatorException {
+        return getOneByWhere(field.name + Condition.GT + value);
     }
 
-    public T getGt(IntegerColumn field, int value) throws OperatorException {
-        return getByWhere(field.getName() + ">" + value);
+    /**
+     * 查询 field>=value的一条记录
+     */
+    public T getGe(Column<? extends Number> field, Number value) throws OperatorException {
+        return getOneByWhere(field.name + Condition.GE + value);
     }
 
-    public T getGe(LongColumn field, long value) throws OperatorException {
-        return getByWhere(field.getName() + ">=" + value);
+    /**
+     * 查询 field<value的一条记录
+     */
+    public T getLt(Column<? extends Number> field, Number value) throws OperatorException {
+        return getOneByWhere(field.name + Condition.LT + value);
     }
 
-    public T getGt(LongColumn field, long value) throws OperatorException {
-        return getByWhere(field.getName() + ">" + value);
+    /**
+     * 查询 field<=value的一条记录
+     */
+    public T getLe(Column<? extends Number> field, Number value) throws OperatorException {
+        return getOneByWhere(field.name + Condition.LE + value);
     }
 
     public StringBuilder buildWhere(String where) {
         StringBuilder sb = new StringBuilder(128);
-        sb.append("select ");
-        sb.append(getFullColumnsString());
+        sb.append("select id,");
+        sb.append(COLUMNS_STRING);
         sb.append(" from ");
         sb.append(tableName);
         if (where != null) {
@@ -338,5 +379,28 @@ public abstract class BaseDao<T> {
             sb.append(where);
         }
         return sb;
+    }
+
+    public Select<T> select() {
+        return new Select(this);
+    }
+    public <CT> Select<CT> select(Column<CT> column) {
+        return new SelectColumn<>(this, column);
+    }
+    public SelectSegment select(Column... columns) {
+        return new SelectSegment(this, columns);
+    }
+    public Update<T> update() {
+        return new Update(this);
+    }
+
+    public PreparedSelect<T> prepareSelect() {
+        return new PreparedSelect(this);
+    }
+    public <CT> PreparedSelect<CT> prepareSelect(Column<CT> column) {
+        return new PreparedSelectColumn(this, column);
+    }
+    public PreparedSelectSegment prepareSelect(Column... columns) {
+        return new PreparedSelectSegment(this, columns);
     }
 }

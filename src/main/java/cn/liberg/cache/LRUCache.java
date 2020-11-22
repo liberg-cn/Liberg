@@ -3,12 +3,21 @@ package cn.liberg.cache;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * 基于{@link java.util.LinkedHashMap}的LRU(Least Recently Used)缓存
+ *
+ * @param <K>
+ * @param <V>
+ *
+ * @author Liberg
+ */
 public class LRUCache<K, V> extends LinkedHashMap<K, V> {
     public LRUCache(int capacity) {
         super(16, 0.75F, true);
         this.capacity = capacity;
     }
 
+    @Override
     protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
         return size() > capacity;
     }

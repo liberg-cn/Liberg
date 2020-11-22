@@ -5,10 +5,27 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Response定义通用的、返回给客户端的响应信息
+ *
+ * @author Liberg
+ */
 public class Response {
+    /**
+     * 响应状态码
+     */
     private int code = StatusCode.OK.code();
+    /**
+     * 状态码描述
+     */
     private String message = "";
+    /**
+     * 响应数据
+     */
     private List datas;
+    /**
+     * 响应附加信息
+     */
     public Map metas;
 
     public int getCode() {
@@ -47,7 +64,7 @@ public class Response {
 
     public Response putMeta(String key, Object value) {
         if(metas == null) {
-            metas = new HashMap<>();
+            metas = new HashMap<String, Object>(16);
         }
         metas.put(key,value);
         return this;
