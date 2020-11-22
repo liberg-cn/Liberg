@@ -5,13 +5,13 @@
 
 包含`Liberg`库（`Jar`）和`LibergCoder`（`Idea插件Jar`）两部分。
 
-### 特点
+### 3大特点
 
 1. `Liberg`是第一个真正实现“**零反射**”的Java `ORM`框架（就笔者个人了解到的情况而言）。
 
    **反射**赋予了Java动态编程的能力。通过反射可以在运行时通过类名称（全限定类名）动态地创建对象、获取对象的属性和方法、为对象赋予新的属性值、调用对象中的方法等等。利用Java的反射机制，动态地创建对象、为对象属性赋值，就可以很容易地实现将数据表中的一条记录转换为一个Java实体类的对象。可以肯定的是，几乎所有`ORM`（Object Relational Mapping）框架就就是这个套路。差别不过是在反射的基础上做了多大程度的优化。
 
-   反射有什么问题？**慢**。
+   反射的强大特性在代码自动化和框架场景中大有用武之地，但也有一个缺点：那就是——**慢**。
 
    利用`LibergCoder`生成代码，`Liberg`真正做到了实体关系映射上的“**零反射**”。因此，可以说`Liberg`是一个极轻量级的`ORM`框架。
 
@@ -25,57 +25,23 @@
 
 3. 最接近`SQL`的代码风格。这里指数据查询和更新的一些代码。
 
-   举几个例子，体会一下：
+   先来看一段演示代码：
 
    ```java
-   // 以下演示代码位于UserDao.java文件
-   
+   // UserDao.java
    // 演示查询操作：查询用户名为name，或者密码为xxx并且年龄大于30的一条记录，
-   // 返回一个User对象
+   // 返回一个User对象或null
    return select()
            .whereEq(columnName, name)
            .or()
            .eq(columnPassword, "xxx")
            .gt(columnAge, 30)
            .one();
-   
-   // 只查询用户名这一列，按id列降序，返回一个List<String>对象
-   return select(columnName)
-           .whereGt(columnId, 0)
-           .eq(columnNickName, nickName)
-           .desc(columnId)
-           .all();
-   
-   // prepare方式的预编译查询：这里演示只查询用户名
-   final PreparedSelectWhere<String> psw = prepareSelect(columnName)
-       .whereGe$(columnId)
-       .eq$(columnAge);
-   
-   try (final PreparedSelectExecutor<String> prepare = psw.prepare()) {
-       // 填充条件参数
-       prepare.setParameter(columnId, 1);
-       prepare.setParameter(columnAge, 10);
-       // 第一次查询
-       prepare.one();
-       
-       // 填充条件参数
-       prepare.setParameter(columnId, 2);
-       prepare.setParameter(columnAge, 30);
-       // 再次查询
-       prepare.one();
-   }
-   
-   // 演示更新操作：更新用户名、密码、增大年龄，通过id相等条件
-   update().set(columnName, newName)
-           .set(columnPassword, newPassword)
-           .increment(columnAge, ageIncrement)
-           .whereEq(columnId, id)
-           .execute();
    ```
-
    
+   更多示例，请参见**附录I MySQL风格的代码**。
 
-`Liberg` + `LibergCoder` `==` 零反射的`ORM`框架 `+` 代码自动化工具
+总之，`Liberg` + `LibergCoder` `==` 零反射的`ORM`框架 `+` 代码自动化工具。
 
 
 
@@ -85,7 +51,7 @@
 
 ### Web系统设计理念
 
-从外部视角来看，**Web系统=数据+功能**，因此`Liberg`围绕“**数据**”和“**接口**”来设计和构架整个Web系统。
+从外部视角来看，**Web系统=数据+功能**。`Liberg`就是围绕“**数据**”和“**接口**”来设计和构架整个Web系统。
 
 **数据**：由`data.entity`包下的实体类进行承载，映射到数据库中的表。entity的一个字段映射为数据库表的一列，通过注解设定为不映射成员除外。
 
@@ -105,7 +71,7 @@
 
 2. 安装Idea插件[LibergCoder.jar](https://github.com/liberg-cn/LibergCoder/blob/master/LibergCoder.jar)，安装完成，重启Idea，菜单栏末尾多出一个`LibergCoder`菜单。
 
-3. 项目中手动引入jar包：[liberg-1.2.0.jar](https://github.com/liberg-cn/Liberg/blob/master/target/liberg-1.2.0.jar)，引入方式见文末备注。
+3. 下载本项目源代码，本地`Maven install`，将`liberg`jar包安装到本地Maven仓库中。也可以在项目中手动引入jar包：[liberg-1.3.0.jar](https://github.com/liberg-cn/Liberg/blob/master/target/liberg-1.3.0.jar)，引入方式见文末备注。
 
 4. **打开SpringBoot项目的启动类（判断标准：带@SpringBootApplication注解），然后执行点击LibergCoder菜单，执行`Initialize...`完成项目代码的初始化**。
 
@@ -175,10 +141,10 @@
    在IDEA中打开`IUserService.java`文件后，执行`LibergCoder--Build entity/interface...`，LibergCoder插件会解析此interface，生成或修改相关的代码文件。比如：
 
    - 创建`controller.api.UserController`类，用于承接http请求。
-   - 创建`service.UserService`类，这是IUserService的实现类，开发者在此编写代码，完成接口需要实现的具体业务逻辑。
+   - 创建`service.UserService`类，这是`IUserService`的实现类，开发者在此编写代码，完成接口需要实现的具体业务逻辑。
    - 在`resources/static/api-doc`目录下创建Markdown格式的接口文档。
 
-7. 运行SpringBoot项目，看看发生了什么。
+7. 运行`SpringBoot`项目，看看发生了什么。
 
 
 
@@ -190,24 +156,24 @@
 
 重复的事情，无须重复做。
 
-”偷懒“是程序员的美德，Liberg或许能帮助您把这种“美德”尽情发挥。
+”偷懒“是驱动人类进步的动力？？！。
 
 1. Liberg自动初始化Web项目、添加maven依赖，甚至连数据库都提供了默认配置。
 2. Liberg由工具维护数据库脚本，包括建库、建表、DDL升级等等。一切变得简单高效，一切尽在java程序员的掌控之中。
-3. 基于数据和接口来构建整个系统，有了entity（*我要保存什么数据*）和interface（*我要对外提供什么功能*），其他都有了。
+3. 基于数据和接口来构建整个系统，有了entity（*保存什么数据*）和interface（*对外提供什么功能*），其他都有了。
 4. 基于SpringBoot，遵循SpringMVC规范，天然拥有强大的框架整合能力和开发生态。
 5. 基于java接口（interface），快速建立Controller、Service，自动生成接口定义文档（供前端和测试使用）。
 
 
 
-> 备注：
+### 备注
+
+> 1. `Liberg`默认依赖`mysql`和`fastjson`。
 >
-> 1. Liberg默认依赖mysql和fastjson。
->
-> 2. Liberg JAR还未提交Maven中央仓库。目前可以下载[liberg-1.2.0.jar](https://github.com/liberg-cn/Liberg/blob/master/target/liberg-1.2.0.jar)，在项目下新增一个lib目录，放入jar包，然后在pom.xml中引入：
+> 2. `Liberg` JAR还未提交Maven中央仓库。目前可以下载最新版[liberg-1.3.0.jar](https://github.com/liberg-cn/Liberg/blob/master/target/liberg-1.3.0.jar)，在项目下新增一个lib目录，放入jar包，然后在`pom.xml`中引入：
 >
 >    ```xml
->    <dependency>
+>   <dependency>
 >        <groupId>cn.liberg</groupId>
 >        <artifactId>liberg</artifactId>
 >        <version>1.2.0</version>
@@ -215,16 +181,59 @@
 >        <systemPath>${project.basedir}/lib/liberg-1.2.0.jar</systemPath>
 >    </dependency>
 >    ```
->
->    或者下载Liberg源码，本地`Maven instal`后直接进行引入。
+> 
+>    或者如前文所述，下载`Liberg`源码，本地`Maven instal`后直接进行引入。
 
 ----
 
-如果您也认可Liberg这种**非反射ORM+插件生成支撑代码**的开发方式，欢迎加入贡献代码，一起交流进步。
+如果您也认可`Liberg`这种**零反射ORM+插件生成支撑代码**的开发方式，欢迎加入贡献代码，一起交流进步。
 
 
 
-### 相关项目
+---
+
+
+
+### **附录I** MySQL风格的代码
+
+`MySQL`风格的查询、更新代码演示：
+
+```java
+// 只查询用户名这一列，按id列降序，返回一个List<String>对象
+return select(columnName)
+        .whereGt(columnId, 0)
+        .eq(columnNickName, nickName)
+        .desc(columnId)
+        .all();
+
+// prepare方式的预编译查询：这里演示只查询用户名
+final PreparedSelectWhere<String> psw = prepareSelect(columnName)
+    .whereGe$(columnId)
+    .eq$(columnAge);
+
+try (final PreparedSelectExecutor<String> prepare = psw.prepare()) {
+    // 填充条件参数
+    prepare.setParameter(columnId, 1);
+    prepare.setParameter(columnAge, 10);
+    // 第一次查询
+    prepare.one();
+    
+    // 填充条件参数
+    prepare.setParameter(columnId, 2);
+    prepare.setParameter(columnAge, 30);
+    // 再次查询
+    prepare.one();
+}
+
+// 演示更新操作：更新用户名、密码、增大年龄，通过id相等条件
+update().set(columnName, newName)
+        .set(columnPassword, newPassword)
+        .increment(columnAge, ageIncrement)
+        .whereEq(columnId, id)
+        .execute();
+```
+
+### 附录II 相关项目
 
 - Liberg项目：[https://github.com/liberg-cn/Liberg](https://github.com/liberg-cn/liberg-demo)
 
@@ -236,13 +245,11 @@
 
   https://github.com/liberg-cn/LibergCoder
 
-
+### 交流
 
 >  *Liberg，让Web开发更简单！*
 >
 >  QQ交流群（推荐）：126193402
 >
-
-
 
 感谢您的阅读。
