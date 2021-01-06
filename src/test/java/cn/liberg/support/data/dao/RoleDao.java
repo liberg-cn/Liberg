@@ -14,11 +14,12 @@ import java.util.List;
 public class RoleDao extends BaseDao<Role> {
     private static volatile RoleDao selfInstance;
 
+    public static final String TABLE_NAME = "role";
     public static final Column<String> columnName = new StringColumn("name", "n");
     public static final Column<String> columnPermissions = new StringColumn("permissions", "p");
 
     private RoleDao() {
-        super("role");
+        super(TABLE_NAME);
         init();
     }
 

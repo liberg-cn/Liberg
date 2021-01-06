@@ -5,6 +5,7 @@ import cn.liberg.database.BaseDao;
 import cn.liberg.database.SqlDefender;
 import cn.liberg.database.select.PreparedSelectExecutor;
 import cn.liberg.database.select.PreparedSelectWhere;
+import cn.liberg.database.select.SelectWhere;
 import cn.liberg.support.data.entity.User;
 
 import java.sql.PreparedStatement;
@@ -19,6 +20,8 @@ import java.util.List;
  */
 public class UserDao extends BaseDao<User> {
     private static volatile UserDao selfInstance;
+
+    public static final String TABLE_NAME = "user";
     public static final Column<String> columnName = new StringColumn("name", "n");
     public static final Column<String> columnPassword = new StringColumn("password", "p");
     public static final Column<Byte> columnAge = new StringColumn("age", "a");
@@ -26,7 +29,7 @@ public class UserDao extends BaseDao<User> {
     public static final Column<Long> columnCreateTime = new LongColumn("createTime", "ct");
 
     private UserDao() {
-        super("user");
+        super(TABLE_NAME);
         init();
     }
 
@@ -65,7 +68,7 @@ public class UserDao extends BaseDao<User> {
      * 单一条件、单条记录查询，可以直接调用BaseDao中的getXx系列方法
      */
     public User getByName1_getEq(String name) throws OperatorException {
-        final User user = getEq(columnName, name);
+        final User user = getOneEq(columnName, name);
 
         return fillData(user);
     }
@@ -148,9 +151,24 @@ return select()
      *
      * 本例演示查询name和password两列
      */
-    public Segment getUserSegment(String name) throws OperatorException {
-        final Segment userSegment = select(columnName, columnPassword).whereEq(columnName, name).one();
-        return userSegment;
+    public Segment<User> getUserSegment(String name) throws OperatorException {
+        final SelectWhere<Segment<User>> selectWhere = select(columnName, columnPassword)
+                .whereEq(columnName, name);
+        return selectWhere.one();
+    }
+
+    /**
+     * 查询某些列
+     *
+     * 本例演示查询name和password两列
+     */
+    public Segment<User> getUserSegment_Prepared(String name) throws OperatorException {
+        final PreparedSelectWhere<Segment<User>> preparedSelectWhere = prepareSelect(columnName, columnPassword).whereEq$(columnName);
+        final PreparedSelectExecutor<Segment<User>> prepare = preparedSelectWhere.prepare();
+        final Segment<User> one = prepare.one();
+        prepare.close();
+
+        return one;
     }
 
     private void init() {

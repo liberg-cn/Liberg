@@ -7,7 +7,7 @@
 
 ### 3大特点
 
-1. `Liberg`是第一个真正实现“**零反射**”的Java `ORM`框架（就笔者个人了解到的情况而言）。
+1. `Liberg`是一个真正实现“**零反射**”的Java `ORM`框架。
 
    **反射**赋予了Java动态编程的能力。通过反射可以在运行时通过类名称（全限定类名）动态地创建对象、获取对象的属性和方法、为对象赋予新的属性值、调用对象中的方法等等。利用Java的反射机制，动态地创建对象、为对象属性赋值，就可以很容易地实现将数据表中的一条记录转换为一个Java实体类的对象。可以肯定的是，几乎所有`ORM`（Object Relational Mapping）框架就就是这个套路。差别不过是在反射的基础上做了多大程度的优化。
 
@@ -45,7 +45,7 @@
 
 
 
-**特别说明：** 由于`Github`在国内访问太慢，相关文档和资源优先在网站[liberg.cn](http://liberg.cn/)进行更新。
+**特别说明：** 由于`Github`在国内访问太慢，相关文档和资源优先在网站[liberg.cn](https://liberg.cn/)进行更新。
 
 
 
@@ -152,7 +152,7 @@
 
 
 
-### 使用Liberg+LibergCoder的开发体验
+### Liberg+LibergCoder开发体验
 
 重复的事情，无须重复做。
 
@@ -173,7 +173,7 @@
 > 2. `Liberg` JAR还未提交Maven中央仓库。目前可以下载最新版[liberg-1.3.0.jar](https://github.com/liberg-cn/Liberg/blob/master/target/liberg-1.3.0.jar)，在项目下新增一个lib目录，放入jar包，然后在`pom.xml`中引入：
 >
 >    ```xml
->   <dependency>
+>     <dependency>
 >        <groupId>cn.liberg</groupId>
 >        <artifactId>liberg</artifactId>
 >        <version>1.2.0</version>
@@ -194,7 +194,7 @@
 
 
 
-### **附录I** MySQL风格的代码
+### 附录I MySQL风格的代码
 
 `MySQL`风格的查询、更新代码演示：
 

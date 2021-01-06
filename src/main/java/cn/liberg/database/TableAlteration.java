@@ -47,7 +47,7 @@ public class TableAlteration {
                 // 1060 Duplicate column name
                 // 1061 Duplicate key name
                 // 1091 Can't DROP 'xxx'. Check that column/key exists
-                logger.warn("TableAlteration exception: {},{}", errorCode, e.getMessage());
+                logger.warn("TableAlteration exception: {}, {}", errorCode, e.getMessage());
             } else {
                 throw e;
             }

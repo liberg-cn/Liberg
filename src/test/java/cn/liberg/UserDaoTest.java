@@ -190,11 +190,21 @@ public class UserDaoTest {
         final String selectedUserName = userDao.getUserName(userName);
         assertEquals(selectedUserName, userName);
         /**
-         * 查询用户名、密码这两列
+         * 只查询用户名、密码这两列
          */
-        final Segment userSegment = userDao.getUserSegment(userName);
+        Segment<User> userSegment = userDao.getUserSegment(userName);
         String keyName = UserDao.columnName.shortName;
         String keyPassword = UserDao.columnPassword.shortName;
+        assertEquals(userSegment.get(keyName), userName);
+        assertEquals(userSegment.get(keyPassword), password);
+        System.out.println(userSegment);
+
+        /**
+         * Prepare方式：只查询用户名、密码这两列
+         */
+        userSegment = userDao.getUserSegment(userName);
+        keyName = UserDao.columnName.shortName;
+        keyPassword = UserDao.columnPassword.shortName;
         assertEquals(userSegment.get(keyName), userName);
         assertEquals(userSegment.get(keyPassword), password);
         System.out.println(userSegment);
@@ -209,7 +219,7 @@ public class UserDaoTest {
         int ageIncrement = -10;
         userDao.update(id, newName, newMd5Password, ageIncrement);
 
-        User updatedUser = userDao.getEq(userDao.columnId, id);
+        User updatedUser = userDao.getOneEq(userDao.columnId, id);
         assertEquals(updatedUser.name, newName);
         assertEquals(updatedUser.password, newMd5Password);
         assertEquals(updatedUser.age, age + ageIncrement);

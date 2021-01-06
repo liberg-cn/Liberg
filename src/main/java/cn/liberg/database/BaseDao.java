@@ -1,9 +1,6 @@
 package cn.liberg.database;
 
-import cn.liberg.core.Column;
-import cn.liberg.core.IdColumn;
-import cn.liberg.core.OperatorException;
-import cn.liberg.core.StatusCode;
+import cn.liberg.core.*;
 import cn.liberg.database.select.*;
 import cn.liberg.database.update.Update;
 
@@ -218,6 +215,43 @@ public abstract class BaseDao<T> {
         }
     }
 
+    /**
+     * 批量新增
+     * @param list
+     * @throws OperatorException
+     */
+    public void batchSave(List<T> list) throws OperatorException {
+        DBHelper.self().beginTransact();
+        try {
+            for(T entity : list) {
+                save(entity);
+            }
+            DBHelper.self().endTransact();
+        } catch (Exception e) {
+            DBHelper.self().transactRollback();
+            throw new OperatorException(StatusCode.ERROR_DB, e);
+        }
+    }
+
+    /**
+     * 批量更新
+     * @param list
+     * @throws OperatorException
+     */
+    public void batchUpdate(List<T> list) throws OperatorException {
+        DBHelper.self().beginTransact();
+        try {
+            for(T entity : list) {
+                update(entity);
+            }
+            DBHelper.self().endTransact();
+        } catch (Exception e) {
+            DBHelper.self().transactRollback();
+            throw new OperatorException(StatusCode.ERROR_DB, e);
+        }
+    }
+
+
     public final T getById(long id) throws OperatorException {
         return dbHelper.getById(id, this);
     }
@@ -249,11 +283,6 @@ public abstract class BaseDao<T> {
     public List<T> getAll() throws OperatorException {
         StringBuilder sb = buildWhere(null);
         return dbHelper.getAllBySql(sb.toString(), this);
-    }
-
-    public T getOne() throws OperatorException {
-        StringBuilder sb = buildWhere("1=1 limit 1");
-        return dbHelper.getBySql(sb.toString(), this);
     }
 
     public int getCount() throws OperatorException {
@@ -315,57 +344,69 @@ public abstract class BaseDao<T> {
     /**
      * 查询 field=value的一条记录
      */
-    public T getEq(Column<String> field, String value) throws OperatorException {
+    public T getOneEq(Column<String> field, String value) throws OperatorException {
         return getOneByWhere(field.name + "=" + SqlDefender.format(value));
+    }
+    /**
+     * 查询 field=value的所有记录
+     */
+    public List<T> getEq(Column<String> field, String value) throws OperatorException {
+        return getByWhere(field.name + "=" + SqlDefender.format(value));
     }
 
     /**
      * 查询 field=value的一条记录
      */
-    public T getEq(Column<? extends Number> field, Number value) throws OperatorException {
+    public T getOneEq(Column<? extends Number> field, Number value) throws OperatorException {
         return getOneByWhere(field.name + Condition.EQ + value);
     }
-
     /**
-     * 查询 field like 'value'的一条记录
+     * 查询 field=value的所有记录
      */
-    public T getLike(Column<String> field, String what) throws OperatorException {
-        return getOneByWhere(field.name + Condition.LIKE + SqlDefender.format(what));
+    public List<T> getEq(Column<? extends Number> field, Number value) throws OperatorException {
+        return getByWhere(field.name + Condition.EQ + value);
     }
 
     /**
-     * 查询 field<>value的一条记录
+     * 查询 field like 'value'的记录
      */
-    public T getNe(Column<? extends Number> field, Number value) throws OperatorException {
-        return getOneByWhere(field.name + Condition.NE + value);
+    public List<T> getLike(Column<String> field, String what) throws OperatorException {
+        return getByWhere(field.name + Condition.LIKE + SqlDefender.format(what));
     }
 
     /**
-     * 查询 field>value的一条记录
+     * 查询 field<>value的记录
      */
-    public T getGt(Column<? extends Number> field, Number value) throws OperatorException {
-        return getOneByWhere(field.name + Condition.GT + value);
+    public List<T> getNe(Column<? extends Number> field, Number value) throws OperatorException {
+        return getByWhere(field.name + Condition.NE + value);
     }
 
     /**
-     * 查询 field>=value的一条记录
+     * 查询 field>value的记录
      */
-    public T getGe(Column<? extends Number> field, Number value) throws OperatorException {
-        return getOneByWhere(field.name + Condition.GE + value);
+    public List<T> getGt(Column<? extends Number> field, Number value) throws OperatorException {
+        return getByWhere(field.name + Condition.GT + value);
     }
 
     /**
-     * 查询 field<value的一条记录
+     * 查询 field>=value的记录
      */
-    public T getLt(Column<? extends Number> field, Number value) throws OperatorException {
-        return getOneByWhere(field.name + Condition.LT + value);
+    public List<T> getGe(Column<? extends Number> field, Number value) throws OperatorException {
+        return getByWhere(field.name + Condition.GE + value);
     }
 
     /**
-     * 查询 field<=value的一条记录
+     * 查询 field<value的记录
      */
-    public T getLe(Column<? extends Number> field, Number value) throws OperatorException {
-        return getOneByWhere(field.name + Condition.LE + value);
+    public List<T> getLt(Column<? extends Number> field, Number value) throws OperatorException {
+        return getByWhere(field.name + Condition.LT + value);
+    }
+
+    /**
+     * 查询 field<=value的记录
+     */
+    public List<T> getLe(Column<? extends Number> field, Number value) throws OperatorException {
+        return getByWhere(field.name + Condition.LE + value);
     }
 
     public StringBuilder buildWhere(String where) {
@@ -387,7 +428,7 @@ public abstract class BaseDao<T> {
     public <CT> Select<CT> select(Column<CT> column) {
         return new SelectColumn<>(this, column);
     }
-    public SelectSegment select(Column... columns) {
+    public SelectSegment<T> select(Column... columns) {
         return new SelectSegment(this, columns);
     }
     public Update<T> update() {
@@ -400,7 +441,7 @@ public abstract class BaseDao<T> {
     public <CT> PreparedSelect<CT> prepareSelect(Column<CT> column) {
         return new PreparedSelectColumn(this, column);
     }
-    public PreparedSelectSegment prepareSelect(Column... columns) {
+    public PreparedSelectSegment<T> prepareSelect(Column... columns) {
         return new PreparedSelectSegment(this, columns);
     }
 }

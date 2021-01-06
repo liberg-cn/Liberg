@@ -12,9 +12,10 @@ import java.util.List;
 /**
  * 查询数据表的一部分列
  *
+ * <T> 泛型，用于标记实体类型
  * @author Liberg
  */
-public class SelectSegment extends Select<Segment> {
+public class SelectSegment<T> extends Select<Segment<T>> {
     private Column[] columns;
 
     public SelectSegment(BaseDao dao, Column... columns) {
@@ -32,9 +33,9 @@ public class SelectSegment extends Select<Segment> {
     }
 
     @Override
-    public Segment readOne(ResultSet resultSet) throws SQLException {
+    public Segment<T> readOne(ResultSet resultSet) throws SQLException {
         if(resultSet.next()) {
-            Segment segment = new Segment();
+            Segment<T> segment = new Segment(dao);
             int index = 1;
             for (Column column : columns) {
                 segment.put(column.shortName, column.getValue(resultSet, index++));
@@ -46,10 +47,10 @@ public class SelectSegment extends Select<Segment> {
     }
 
     @Override
-    public List<Segment> readAll(ResultSet resultSet) throws SQLException {
-        List<Segment> list = new ArrayList<>();
+    public List<Segment<T>> readAll(ResultSet resultSet) throws SQLException {
+        List<Segment<T>> list = new ArrayList<>();
         while (resultSet.next()) {
-            Segment segment = new Segment();
+            Segment<T> segment = new Segment(dao);
             int index = 1;
             for (Column column : columns) {
                 segment.put(column.shortName, column.getValue(resultSet, index++));

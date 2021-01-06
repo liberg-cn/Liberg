@@ -12,9 +12,10 @@ import java.util.List;
 /**
  * 查询数据表的一部分列
  *
+ * <T> 指代实体类型
  * @author Liberg
  */
-public class PreparedSelectSegment extends PreparedSelect<Segment> {
+public class PreparedSelectSegment<T> extends PreparedSelect<Segment<T>> {
     private Column[] columns;
 
     public PreparedSelectSegment(BaseDao dao, Column... columns) {
@@ -32,9 +33,9 @@ public class PreparedSelectSegment extends PreparedSelect<Segment> {
     }
 
     @Override
-    public Segment readOne(ResultSet resultSet) throws SQLException {
+    public Segment<T> readOne(ResultSet resultSet) throws SQLException {
         if(resultSet.next()) {
-            Segment segment = new Segment();
+            Segment<T> segment = new Segment(dao);
             int index = 1;
             for (Column column : columns) {
                 segment.put(column.shortName, column.getValue(resultSet, index++));
@@ -46,10 +47,10 @@ public class PreparedSelectSegment extends PreparedSelect<Segment> {
     }
 
     @Override
-    public List<Segment> readAll(ResultSet resultSet) throws SQLException {
-        List<Segment> list = new ArrayList<>();
+    public List<Segment<T>> readAll(ResultSet resultSet) throws SQLException {
+        List<Segment<T>> list = new ArrayList<>();
         while (resultSet.next()) {
-            Segment segment = new Segment();
+            Segment<T> segment = new Segment(dao);
             int index = 1;
             for (Column column : columns) {
                 segment.put(column.shortName, column.getValue(resultSet, index++));

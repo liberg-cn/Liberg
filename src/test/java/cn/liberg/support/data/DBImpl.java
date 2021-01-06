@@ -61,7 +61,7 @@ public class DBImpl implements IDataBase {
     }
 
     protected void createTableRole(Statement stat) throws SQLException {
-        TableBuilder tb = new TableBuilder(RoleDao.self().getTableName());
+        TableBuilder tb = new TableBuilder(RoleDao.TABLE_NAME);
         tb.add(RoleDao.columnName, typeString(31));
         tb.add(RoleDao.columnPermissions, typeText());
         stat.executeUpdate(tb.build());
@@ -69,9 +69,9 @@ public class DBImpl implements IDataBase {
 
     protected void createTableUser(Statement stat) throws SQLException {
         UserDao dao = UserDao.self();
-        TableBuilder tb = new TableBuilder(dao.getTableName());
+        TableBuilder tb = new TableBuilder(UserDao.TABLE_NAME);
         tb.add(dao.columnName, true, typeString());
-        tb.add(dao.columnPassword, typeString());
+        tb.add(dao.columnPassword, typeString(), "这是\"\"空字符串");
         tb.add(dao.columnAge, typeByte());
         tb.add(dao.columnRoleId, typeLong());
         tb.add(dao.columnCreateTime, typeLong());

@@ -12,8 +12,11 @@ public class DBConnectorTest {
     private static int SIZE = 3;
 
     private boolean testConnection(Connection conn) throws SQLException {
+        boolean result;
         Statement stat = conn.createStatement();
-        return stat.executeQuery("select 1") != null;
+        result = stat.executeQuery("select 1") != null;
+        stat.close();
+        return result;
     }
 
     private void repeatTest(DBConnector connector) {
