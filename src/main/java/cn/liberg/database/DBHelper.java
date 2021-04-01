@@ -22,7 +22,7 @@ public class DBHelper {
     private static final Logger logger = LoggerFactory.getLogger(DBHelper.class);
     private static volatile DBHelper selfInstance = null;
 
-    public static final String VERSION = "1.3.0";
+    public static final String VERSION = "1.3.2";
     public IDataBaseConf dbConf = null;
     boolean initialized = false;
 
@@ -42,9 +42,22 @@ public class DBHelper {
         dbVersionMgr = new DBVersionManager(dbConnector);
     }
 
+    /**
+     * DB初始化入口
+     *
+     * 控制台ANSI颜色编码说明：
+     * 编码开始(ESC_START): \033[
+     * 编码结束(ESC_END):   m
+     * -------------------------
+     * 前景黑色(BLACK_FG):  30
+     * 前景红色(RED_FG):    31
+     * 前景绿色(GREEN_FG):  32
+     * 前景黄色(YELLOW_FG): 33
+     * 前景蓝色(BLUE_FG):   34
+     */
     public synchronized void init(IDataBase dbImpl) {
         if (initialized == false) {
-            System.out.println(
+            System.out.println("\033[32m"+
                     "  _      _ _                    \n" +
                     " | |    (_| |                   \n" +
                     " | |     _| |__   ___ _ __ __ _ \n" +
@@ -52,7 +65,7 @@ public class DBHelper {
                     " | |____| | |_) |  __| | | (_| |\n" +
                     " |______|_|_.__/ \\___|_|  \\__, |\n" +
                     "                           __/ |\n" +
-                    " Liberg (v" + VERSION + ")          |___/ \n");
+                    " Liberg (\033[31mv" + VERSION + "\033[32m)          |___/ \n\033[39m");
             createDatabaseIfAbsent(dbImpl.getConfig());
             ArrayList<IDataBase> dBCreators = new ArrayList<>();
             dBCreators.add(dbImpl);

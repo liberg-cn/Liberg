@@ -6,7 +6,7 @@
 
     <groupId>cn.liberg</groupId>
     <artifactId>liberg</artifactId>
-    <version>1.3.0</version>
+    <version>1.3.2</version>
     <name>Liberg</name>
     <description>A high-performance and lightweight web basis for SpringBoot.</description>
 

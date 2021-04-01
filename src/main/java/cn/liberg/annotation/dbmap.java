@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
  * @author Liberg
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target(ElementType.FIELD)
+@Target({ElementType.TYPE, ElementType.FIELD})
 public @interface dbmap {
 	/**
 	 * 列的存储长度，String类型有效

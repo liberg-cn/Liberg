@@ -19,7 +19,7 @@ public class DBConnectorTest {
         return result;
     }
 
-    private void repeatTest(DBConnector connector) {
+    private void repeatTest(DBConnector connector, int curIdx) {
         Connection conn = null;
         boolean isTxError = false;
         try {
@@ -28,7 +28,7 @@ public class DBConnectorTest {
             assertEquals(SIZE-1, connector.getFreeCount());
 
             if (testConnection(conn)) {
-                System.out.println("OK");
+                System.out.println("OK " + curIdx);
             }
         } catch (SQLException ex) {
             isTxError = DBHelper.isTxError(ex);
@@ -78,8 +78,8 @@ public class DBConnectorTest {
         assertEquals(SIZE, connector.getFreeCount());
 
 
-        int i = 0;
-        while (i < 10) {
+        int i = 10;
+        while (i > 0) {
             /**
              * 多次执行的方法：
              * 1、MySQL服务端正常打开后，开始执行几次；
@@ -97,14 +97,14 @@ public class DBConnectorTest {
              * OK
              * OK
              */
-            repeatTest(connector);
+            repeatTest(connector, i);
 
             try {
                 Thread.sleep(1200);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            i++;
+            i--;
         }
     }
 }

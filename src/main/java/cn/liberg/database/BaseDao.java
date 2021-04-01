@@ -342,23 +342,62 @@ public abstract class BaseDao<T> {
     }
 
     /**
-     * 查询 field=value的一条记录
+     * 查询 field=value的单条记录
      */
     public T getOneEq(Column<String> field, String value) throws OperatorException {
         return getOneByWhere(field.name + "=" + SqlDefender.format(value));
     }
     /**
+     * 查询 field=value的单条记录
+     */
+    public T getOneEq(Column<? extends Number> field, Number value) throws OperatorException {
+        return getOneByWhere(field.name + Condition.EQ + value);
+    }
+    /**
+     * 查询 field<>value的单条记录
+     */
+    public T getOneNe(Column<? extends Number> field, Number value) throws OperatorException {
+        return getOneByWhere(field.name + Condition.NE + value);
+    }
+    /**
+     * 查询 field>value的单条记录
+     */
+    public T getOneGt(Column<? extends Number> field, Number value) throws OperatorException {
+        return getOneByWhere(field.name + Condition.GT + value);
+    }
+
+    /**
+     * 查询 field>=value的记录
+     */
+    public T getOneGe(Column<? extends Number> field, Number value) throws OperatorException {
+        return getOneByWhere(field.name + Condition.GE + value);
+    }
+
+    /**
+     * 查询 field<value的记录
+     */
+    public T getOneLt(Column<? extends Number> field, Number value) throws OperatorException {
+        return getOneByWhere(field.name + Condition.LT + value);
+    }
+
+    /**
+     * 查询 field<=value的记录
+     */
+    public T getOneLe(Column<? extends Number> field, Number value) throws OperatorException {
+        return getOneByWhere(field.name + Condition.LE + value);
+    }
+    /**
+     * 查询 field like 'value'的单条记录
+     */
+    public T getOneLike(Column<String> field, String what) throws OperatorException {
+        return getOneByWhere(field.name + Condition.LIKE + SqlDefender.format(what));
+    }
+
+    /**
      * 查询 field=value的所有记录
      */
     public List<T> getEq(Column<String> field, String value) throws OperatorException {
         return getByWhere(field.name + "=" + SqlDefender.format(value));
-    }
-
-    /**
-     * 查询 field=value的一条记录
-     */
-    public T getOneEq(Column<? extends Number> field, Number value) throws OperatorException {
-        return getOneByWhere(field.name + Condition.EQ + value);
     }
     /**
      * 查询 field=value的所有记录
@@ -366,14 +405,6 @@ public abstract class BaseDao<T> {
     public List<T> getEq(Column<? extends Number> field, Number value) throws OperatorException {
         return getByWhere(field.name + Condition.EQ + value);
     }
-
-    /**
-     * 查询 field like 'value'的记录
-     */
-    public List<T> getLike(Column<String> field, String what) throws OperatorException {
-        return getByWhere(field.name + Condition.LIKE + SqlDefender.format(what));
-    }
-
     /**
      * 查询 field<>value的记录
      */
@@ -407,6 +438,12 @@ public abstract class BaseDao<T> {
      */
     public List<T> getLe(Column<? extends Number> field, Number value) throws OperatorException {
         return getByWhere(field.name + Condition.LE + value);
+    }
+    /**
+     * 查询 field like 'value'的记录
+     */
+    public List<T> getLike(Column<String> field, String what) throws OperatorException {
+        return getByWhere(field.name + Condition.LIKE + SqlDefender.format(what));
     }
 
     public StringBuilder buildWhere(String where) {

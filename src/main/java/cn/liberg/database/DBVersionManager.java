@@ -46,6 +46,7 @@ public class DBVersionManager {
                 int currentVersion = creator.getCurrentVersion();
                 String dbName = creator.getName();
                 int oldVersion = DBVersion.getVersion(dbName);
+                logger.info("connected to DB: {}, dbVer: {}", creator.getName(), oldVersion);
                 if (oldVersion == -1) {
                     dbVer.saveVersion(dbName, currentVersion, false);
                     creator.createTable(stat);

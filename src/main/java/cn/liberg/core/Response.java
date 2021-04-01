@@ -1,9 +1,6 @@
 package cn.liberg.core;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Response定义通用的、返回给客户端的响应信息
@@ -28,6 +25,27 @@ public class Response {
      */
     public Map metas;
 
+    public static Response ok() {
+        return new Response();
+    }
+
+    public static Response ok(List datas) {
+        return new Response().setDatas(datas);
+    }
+
+    public static Response ok(Object data) {
+        return new Response().putData(data);
+    }
+
+    public static Response fail(OperatorException e) {
+        Response res = Response.of(e.statusCode());
+        StackTraceElement[] stackTrace = e.getStackTrace();
+        if(stackTrace.length > 0) {
+            res.putMeta(e.getClass().getName(), stackTrace[0].toString());
+        }
+        return res;
+    }
+
     public int getCode() {
         return code;
     }
@@ -50,7 +68,7 @@ public class Response {
     }
 
     public Response putData(Object data) {
-        if(datas == null) {
+        if (datas == null) {
             datas = new ArrayList<>();
         }
         datas.add(data);
@@ -63,15 +81,11 @@ public class Response {
     }
 
     public Response putMeta(String key, Object value) {
-        if(metas == null) {
+        if (metas == null) {
             metas = new HashMap<String, Object>(16);
         }
-        metas.put(key,value);
+        metas.put(key, value);
         return this;
-    }
-
-    public static Response ok() {
-        return new Response();
     }
 
     public static Response of(IStatusCode sc) {
@@ -81,22 +95,20 @@ public class Response {
         return res;
     }
 
-    public static Response of(int code) {
-        Response res = new Response();
-        res.code = code;
-        return res;
-    }
-
-    public static Response of(String message) {
-        Response res = new Response();
-        res.message = message;
-        return res;
-    }
-
     public static Response of(int code, String message) {
         Response res = new Response();
         res.code = code;
         res.message = message;
         return res;
+    }
+
+    @Override
+    public String toString() {
+        return "Response{" +
+                "code=" + code +
+                ", message='" + message + '\'' +
+                ", datas=" + datas +
+                ", metas=" + metas +
+                '}';
     }
 }
