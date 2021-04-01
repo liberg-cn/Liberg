@@ -46,7 +46,7 @@
 
    
 
-更多示例，请参见**[附录I MySQL风格的代码](#appendix1)**。
+更多示例，请参见[附录I MySQL风格的代码](#附录I-MySQL风格的代码)。
 
 总之，`Liberg` + `LibergCoder` `==` 零反射的`ORM`框架 `+` 代码自动化工具。
 
