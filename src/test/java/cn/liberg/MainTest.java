@@ -10,7 +10,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
-@Suite.SuiteClasses({UserDaoTest.class, JoinQueryTest.class})
+@Suite.SuiteClasses({UserDaoTest.class, DaoTest.class})
 public class MainTest {
 
     @BeforeClass

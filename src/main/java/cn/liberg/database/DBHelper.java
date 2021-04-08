@@ -3,6 +3,7 @@ package cn.liberg.database;
 import cn.liberg.core.Column;
 import cn.liberg.core.OperatorException;
 import cn.liberg.core.StatusCode;
+import cn.liberg.database.join.JoinResult;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -166,6 +167,9 @@ public class DBHelper {
         Statement stat = null;
         ResultSet rs = null;
         boolean isTxError = false;
+        if(logger.isDebugEnabled()) {
+            logger.debug(sql);
+        }
         T entity = null;
         try {
             conn = dbConnector.getConnect();
@@ -188,6 +192,9 @@ public class DBHelper {
         Statement stat = null;
         List<T> list = new ArrayList<>();
         boolean isTxError = false;
+        if(logger.isDebugEnabled()) {
+            logger.debug(sql);
+        }
         ResultSet rs;
         try {
             conn = dbConnector.getConnect();
@@ -335,6 +342,9 @@ public class DBHelper {
         Statement stat = null;
         Connection conn = null;
         boolean isTxError = false;
+        if(logger.isDebugEnabled()) {
+            logger.debug(sql);
+        }
         try {
             conn = dbConnector.getConnect();
             stat = conn.createStatement();
@@ -533,23 +543,42 @@ public class DBHelper {
     }
 
     /**
-     * * 事务开始
+     * 有返回结果的事务
      */
-    public void beginTransact() throws OperatorException {
+    public <R> R transaction(TransactionCallback<R> callback) throws OperatorException {
+        R result;
+        beginTransact();
         try {
-            dbConnector.beginTransact();
-        } catch (Exception e) {
+            result = callback.execute();
+            endTransact();
+        } catch(Exception e) {
+            transactRollback();
+            throw new OperatorException(StatusCode.ERROR_DB, e);
+        }
+        return result;
+    }
+
+    /**
+     * 无返回结果的事务
+     */
+    public void transaction(TransactionCallbackWithoutResult callback) throws OperatorException {
+        beginTransact();
+        try {
+            callback.execute();
+            endTransact();
+        } catch(Exception e) {
+            transactRollback();
             throw new OperatorException(StatusCode.ERROR_DB, e);
         }
     }
 
     /**
-     * * 事务回滚
+     * * 事务开始
      */
-    public void transactRollback() throws OperatorException {
+    public void beginTransact() throws OperatorException {
         try {
-            dbConnector.transactRollback();
-        } catch (Exception e) {
+            dbConnector.beginTransact();
+        } catch (SQLException e) {
             throw new OperatorException(StatusCode.ERROR_DB, e);
         }
     }
@@ -560,7 +589,18 @@ public class DBHelper {
     public void endTransact() throws OperatorException {
         try {
             dbConnector.endTransact();
-        } catch (Exception e) {
+        } catch (SQLException e) {
+            throw new OperatorException(StatusCode.ERROR_DB, e);
+        }
+    }
+
+    /**
+     * * 事务回滚
+     */
+    public void transactRollback() throws OperatorException {
+        try {
+            dbConnector.transactRollback();
+        } catch (SQLException e) {
             throw new OperatorException(StatusCode.ERROR_DB, e);
         }
     }
@@ -568,12 +608,15 @@ public class DBHelper {
     /**
      * 可用于关联查询
      */
-    public TableData getTableData(String sql) throws OperatorException {
+    public JoinResult getTableData(String sql) throws OperatorException {
         Connection conn = null;
         ResultSet rs = null;
         Statement stat = null;
-        TableData td = null;
+        JoinResult td = null;
         boolean isTxError = false;
+        if(logger.isDebugEnabled()) {
+            logger.debug(sql);
+        }
 
         try {
             conn = dbConnector.getConnect();
@@ -583,7 +626,7 @@ public class DBHelper {
             ResultSetMetaData meta = rs.getMetaData();
             int columnCount = meta.getColumnCount();
 
-            td = new TableData();
+            td = new JoinResult();
             td.heads = new String[columnCount];
             td.datas = new ArrayList<>();
             for (int i = 1; i <= columnCount; i++) {

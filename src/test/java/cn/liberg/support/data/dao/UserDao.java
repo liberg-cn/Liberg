@@ -68,7 +68,7 @@ public class UserDao extends BaseDao<User> {
      * 单一条件、单条记录查询，可以直接调用BaseDao中的getXx系列方法
      */
     public User getByName1_getEq(String name) throws OperatorException {
-        final User user = getOneEq(columnName, name);
+        final User user = getEq(columnName, name);
 
         return fillData(user);
     }

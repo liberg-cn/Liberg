@@ -3,7 +3,6 @@ package cn.liberg.database.join;
 import cn.liberg.core.*;
 import cn.liberg.database.BaseDao;
 import cn.liberg.database.DBHelper;
-import cn.liberg.database.TableData;
 import cn.liberg.database.Condition;
 import cn.liberg.database.Joints;
 import cn.liberg.database.WhereMeta;
@@ -315,12 +314,12 @@ public class JoinQuery {
         return (T)DBHelper.self().getBySql(sql, joinDao.dao);
     }
 
-    public TableData all() throws OperatorException {
+    public JoinResult all() throws OperatorException {
         String sql = "select " + joinFields.build() + build();
         return DBHelper.self().getTableData(sql);
     }
 
-    public TableData one() throws OperatorException {
+    public JoinResult one() throws OperatorException {
         limit(1);
         String sql = "select " + joinFields.build() + build();
         System.out.println(sql);

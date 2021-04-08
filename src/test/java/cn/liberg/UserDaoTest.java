@@ -219,7 +219,7 @@ public class UserDaoTest {
         int ageIncrement = -10;
         userDao.update(id, newName, newMd5Password, ageIncrement);
 
-        User updatedUser = userDao.getOneEq(userDao.columnId, id);
+        User updatedUser = userDao.getEq(userDao.columnId, id);
         assertEquals(updatedUser.name, newName);
         assertEquals(updatedUser.password, newMd5Password);
         assertEquals(updatedUser.age, age + ageIncrement);

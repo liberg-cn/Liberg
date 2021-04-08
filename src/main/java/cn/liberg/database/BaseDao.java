@@ -182,12 +182,12 @@ public abstract class BaseDao<T> {
     /**
      * 仅仅将entity的部分字段(除columns外的字段)更新到数据库
      * @param entity
-     * @param columns
+     * @param excludedColumns
      * @throws OperatorException
      */
-    public void updateExclusive(T entity, Column... columns) throws OperatorException {
+    public void updateExclusive(T entity, Column... excludedColumns) throws OperatorException {
         Set<Column> set = new HashSet<>();
-        for (Column column : columns) {
+        for (Column column : excludedColumns) {
             set.add(column);
         }
         dbHelper.updateExclusive(entity, this, set);
@@ -199,7 +199,7 @@ public abstract class BaseDao<T> {
      * @throws OperatorException
      */
     public void batchSaveOrUpdate(List<T> list) throws OperatorException {
-        DBHelper.self().beginTransact();
+        dbHelper.beginTransact();
         try {
             for(T entity : list) {
                 if(getEntityId(entity) > 0) {
@@ -208,9 +208,9 @@ public abstract class BaseDao<T> {
                     save(entity);
                 }
             }
-            DBHelper.self().endTransact();
+            dbHelper.endTransact();
         } catch (Exception e) {
-            DBHelper.self().transactRollback();
+            dbHelper.transactRollback();
             throw new OperatorException(StatusCode.ERROR_DB, e);
         }
     }
@@ -221,14 +221,14 @@ public abstract class BaseDao<T> {
      * @throws OperatorException
      */
     public void batchSave(List<T> list) throws OperatorException {
-        DBHelper.self().beginTransact();
+        dbHelper.beginTransact();
         try {
             for(T entity : list) {
                 save(entity);
             }
-            DBHelper.self().endTransact();
+            dbHelper.endTransact();
         } catch (Exception e) {
-            DBHelper.self().transactRollback();
+            dbHelper.transactRollback();
             throw new OperatorException(StatusCode.ERROR_DB, e);
         }
     }
@@ -239,30 +239,50 @@ public abstract class BaseDao<T> {
      * @throws OperatorException
      */
     public void batchUpdate(List<T> list) throws OperatorException {
-        DBHelper.self().beginTransact();
+        dbHelper.beginTransact();
         try {
             for(T entity : list) {
                 update(entity);
             }
-            DBHelper.self().endTransact();
+            dbHelper.endTransact();
         } catch (Exception e) {
-            DBHelper.self().transactRollback();
+            dbHelper.transactRollback();
             throw new OperatorException(StatusCode.ERROR_DB, e);
         }
     }
 
-
+    /**
+     * 通过主键（id）进行查询
+     * 没有符合条件的记录，返回null
+     */
     public final T getById(long id) throws OperatorException {
         return dbHelper.getById(id, this);
     }
 
+    /**
+     * 通过where条件查询单条记录
+     * 没有符合条件的记录，返回null
+     */
     public T getOneByWhere(String where) throws OperatorException {
         StringBuilder sb = buildWhere(where);
         sb.append(" limit 1");
         return dbHelper.getBySql(sb.toString(), this);
     }
 
-    public List<T> getPageByWhere(int pageNum, int pageSize, String where) throws OperatorException {
+    /**
+     * 通过where条件查询所有记录
+     * 没有符合条件的记录，返回null
+     */
+    public List<T> getByWhere(String where) throws OperatorException {
+        StringBuilder sb = buildWhere(where);
+        return dbHelper.getAllBySql(sb.toString(), this);
+    }
+
+    /**
+     * 通过where条件查询指定页数范围内的记录
+     * 没有符合条件的记录，返回null
+     */
+    public List<T> getByWhere(String where, int pageNum, int pageSize) throws OperatorException {
         StringBuilder sb = buildWhere(where);
         sb.append(" limit ");
         sb.append((pageNum - 1) * pageSize);
@@ -271,9 +291,9 @@ public abstract class BaseDao<T> {
         return dbHelper.getAllBySql(sb.toString(), this);
     }
 
-    public List<T> getByWhere(String where) throws OperatorException {
-        StringBuilder sb = buildWhere(where);
-        return dbHelper.getAllBySql(sb.toString(), this);
+
+    public T getOneBySql(String sql) throws OperatorException {
+        return dbHelper.getBySql(sql, this);
     }
 
     public List<T> getAllBySql(String sql) throws OperatorException {
@@ -344,106 +364,126 @@ public abstract class BaseDao<T> {
     /**
      * 查询 field=value的单条记录
      */
-    public T getOneEq(Column<String> field, String value) throws OperatorException {
+    public T getEq(Column<String> field, String value) throws OperatorException {
         return getOneByWhere(field.name + "=" + SqlDefender.format(value));
     }
     /**
      * 查询 field=value的单条记录
      */
-    public T getOneEq(Column<? extends Number> field, Number value) throws OperatorException {
+    public T getEq(Column<? extends Number> field, Number value) throws OperatorException {
         return getOneByWhere(field.name + Condition.EQ + value);
     }
     /**
      * 查询 field<>value的单条记录
      */
-    public T getOneNe(Column<? extends Number> field, Number value) throws OperatorException {
+    public T getNe(Column<? extends Number> field, Number value) throws OperatorException {
         return getOneByWhere(field.name + Condition.NE + value);
     }
     /**
      * 查询 field>value的单条记录
      */
-    public T getOneGt(Column<? extends Number> field, Number value) throws OperatorException {
+    public T getGt(Column<? extends Number> field, Number value) throws OperatorException {
         return getOneByWhere(field.name + Condition.GT + value);
     }
 
     /**
      * 查询 field>=value的记录
      */
-    public T getOneGe(Column<? extends Number> field, Number value) throws OperatorException {
+    public T getGe(Column<? extends Number> field, Number value) throws OperatorException {
         return getOneByWhere(field.name + Condition.GE + value);
     }
 
     /**
      * 查询 field<value的记录
      */
-    public T getOneLt(Column<? extends Number> field, Number value) throws OperatorException {
+    public T getLt(Column<? extends Number> field, Number value) throws OperatorException {
         return getOneByWhere(field.name + Condition.LT + value);
     }
 
     /**
      * 查询 field<=value的记录
      */
-    public T getOneLe(Column<? extends Number> field, Number value) throws OperatorException {
+    public T getLe(Column<? extends Number> field, Number value) throws OperatorException {
         return getOneByWhere(field.name + Condition.LE + value);
     }
     /**
      * 查询 field like 'value'的单条记录
      */
-    public T getOneLike(Column<String> field, String what) throws OperatorException {
+    public T getLike(Column<String> field, String what) throws OperatorException {
         return getOneByWhere(field.name + Condition.LIKE + SqlDefender.format(what));
     }
 
     /**
      * 查询 field=value的所有记录
      */
-    public List<T> getEq(Column<String> field, String value) throws OperatorException {
+    public List<T> getEqs(Column<String> field, String value) throws OperatorException {
         return getByWhere(field.name + "=" + SqlDefender.format(value));
     }
     /**
      * 查询 field=value的所有记录
      */
-    public List<T> getEq(Column<? extends Number> field, Number value) throws OperatorException {
+    public List<T> getEqs(Column<? extends Number> field, Number value) throws OperatorException {
         return getByWhere(field.name + Condition.EQ + value);
     }
     /**
      * 查询 field<>value的记录
      */
-    public List<T> getNe(Column<? extends Number> field, Number value) throws OperatorException {
+    public List<T> getNes(Column<? extends Number> field, Number value) throws OperatorException {
         return getByWhere(field.name + Condition.NE + value);
     }
 
     /**
      * 查询 field>value的记录
      */
-    public List<T> getGt(Column<? extends Number> field, Number value) throws OperatorException {
+    public List<T> getGts(Column<? extends Number> field, Number value) throws OperatorException {
         return getByWhere(field.name + Condition.GT + value);
     }
 
     /**
      * 查询 field>=value的记录
      */
-    public List<T> getGe(Column<? extends Number> field, Number value) throws OperatorException {
+    public List<T> getGes(Column<? extends Number> field, Number value) throws OperatorException {
         return getByWhere(field.name + Condition.GE + value);
     }
 
     /**
      * 查询 field<value的记录
      */
-    public List<T> getLt(Column<? extends Number> field, Number value) throws OperatorException {
+    public List<T> getLts(Column<? extends Number> field, Number value) throws OperatorException {
         return getByWhere(field.name + Condition.LT + value);
     }
 
     /**
      * 查询 field<=value的记录
      */
-    public List<T> getLe(Column<? extends Number> field, Number value) throws OperatorException {
+    public List<T> getLes(Column<? extends Number> field, Number value) throws OperatorException {
         return getByWhere(field.name + Condition.LE + value);
     }
     /**
      * 查询 field like 'value'的记录
      */
-    public List<T> getLike(Column<String> field, String what) throws OperatorException {
+    public List<T> getLikes(Column<String> field, String what) throws OperatorException {
         return getByWhere(field.name + Condition.LIKE + SqlDefender.format(what));
+    }
+
+    /**
+     * 有返回结果的事务
+     * @param callback
+     * @param <R>
+     * @return
+     * @throws OperatorException
+     */
+    public <R> R transaction(TransactionCallback<R> callback) throws OperatorException {
+        return dbHelper.transaction(callback);
+    }
+
+    /**
+     * 无返回结果的事务
+     * @param callback
+     * @throws OperatorException
+     */
+    public void transaction(TransactionCallbackWithoutResult callback) throws OperatorException {
+        dbHelper.transaction(callback);
     }
 
     public StringBuilder buildWhere(String where) {

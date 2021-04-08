@@ -5,3 +5,4 @@
 /target/generated-test-sources
 /target/maven-archiver
 /target/maven-status
+/.idea

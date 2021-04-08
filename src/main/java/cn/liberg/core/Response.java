@@ -71,7 +71,9 @@ public class Response {
         if (datas == null) {
             datas = new ArrayList<>();
         }
-        datas.add(data);
+        if(data != null) {
+            datas.add(data);
+        }
         return this;
     }
 
@@ -84,7 +86,9 @@ public class Response {
         if (metas == null) {
             metas = new HashMap<String, Object>(16);
         }
-        metas.put(key, value);
+        if(key != null) {
+            metas.put(key, value);
+        }
         return this;
     }
 

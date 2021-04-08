@@ -13,7 +13,7 @@ import java.sql.SQLException;
  *
  * <p>需要指出的是，entity中指定了{@code @dbmap(isIndex=false)}注解的字段不会建立映射关系。
  *
- * <p>为了保持XXXDao更“轻量级”，实体中的字段除了名称外，其他信息并没有记录到相应的{@code Column}中，
+ * <p>为了保持XxxDao更“轻量级”，实体中的字段除了名称外，其他信息并没有记录到相应的{@code Column}中，
  * 而是在构造建表语句时，由{@link cn.liberg.database.TableBuilder#add}方法中进行传入。
  * 传入的信息包括: 类型、长度、是否是索引字段、列注释等。
  *
