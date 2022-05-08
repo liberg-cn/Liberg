@@ -8,17 +8,11 @@ import java.sql.SQLException;
  *
  * @author Liberg
  */
-public class ByteColumn extends Column<Byte> {
+public abstract class ByteColumn<E> extends Column<E, Byte> {
 
     public ByteColumn(String entityFieldName, String shortName) {
         super(entityFieldName, shortName);
     }
-
-    @Override
-    public ColumnType type() {
-        return ColumnType.Byte;
-    }
-
 
     @Override
     public Byte getValue(ResultSet rs, int columnIndex) throws SQLException {

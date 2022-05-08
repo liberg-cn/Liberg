@@ -8,15 +8,10 @@ import java.sql.SQLException;
  *
  * @author Liberg
  */
-public class IntegerColumn extends Column {
+public abstract class IntegerColumn<E> extends Column<E, Integer> {
 
     public IntegerColumn(String entityFieldName, String shortName) {
         super(entityFieldName, shortName);
-    }
-
-    @Override
-    public ColumnType type() {
-        return ColumnType.Integer;
     }
 
     @Override

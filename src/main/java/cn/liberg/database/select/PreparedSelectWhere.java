@@ -15,8 +15,6 @@ public class PreparedSelectWhere<T> extends PreparedWhere<PreparedSelectWhere<T>
     private final PreparedSelect<T> select;
     private Column orderBy = null;
     private boolean isAsc = true;
-    int limitStart = 0;
-    int limitCount = 1000;
 
     public PreparedSelectWhere(PreparedSelect<T> select) {
         this.select = select;
@@ -24,17 +22,6 @@ public class PreparedSelectWhere<T> extends PreparedWhere<PreparedSelectWhere<T>
 
     public PreparedSelectExecutor<T> prepare() throws OperatorException {
         return new PreparedSelectExecutor<>(select, this);
-    }
-
-    public PreparedSelectWhere<T> limit(int start, int count) {
-        limitStart = start;
-        limitCount = count;
-        return this;
-    }
-
-    public PreparedSelectWhere<T> limit(int count) {
-        limitCount = count;
-        return this;
     }
 
     /**

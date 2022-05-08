@@ -1,6 +1,7 @@
 package cn.liberg.database.update;
 
 import cn.liberg.core.Column;
+import cn.liberg.core.Field;
 import cn.liberg.database.BaseDao;
 import cn.liberg.database.SqlDefender;
 
@@ -21,8 +22,7 @@ import java.util.Map;
  * @see UpdateWhere
  */
 public class Update<T> {
-
-    LinkedHashMap<Column, String> pairs;
+    LinkedHashMap<Field, String> pairs;
     BaseDao<T> dao;
 
     public Update(BaseDao<T> dao) {
@@ -30,28 +30,29 @@ public class Update<T> {
         pairs = new LinkedHashMap<>(16);
     }
 
-    public Update<T> set(Column<String> column, String value) {
+    public Update set(Field<String> column, String value) {
         pairs.put(column, SqlDefender.format(value));
         return this;
     }
-    public Update<T> set(Column<? extends Number> column, Number value) {
+
+    public Update<T> set(Field<? extends Number> column, Number value) {
         pairs.put(column, value.toString());
         return this;
     }
 
-    public Update<T> increment(Column<? extends Number> column, Number value) {
+    public Update<T> increment(Field<? extends Number> column, int value) {
         StringBuilder sb = new StringBuilder(column.name);
-        if(value.longValue()>=0) {
+        if (value >= 0) {
             sb.append('+');
         }
-        sb.append(value.toString());
+        sb.append(value);
         pairs.put(column, sb.toString());
         return this;
     }
 
-    String buildSql() {
+    String build() {
         StringBuilder sb = new StringBuilder();
-        for(Map.Entry<Column, String> entry : pairs.entrySet()) {
+        for(Map.Entry<Field, String> entry : pairs.entrySet()) {
             sb.append(entry.getKey().name);
             sb.append('=');
             sb.append(entry.getValue());
@@ -74,7 +75,7 @@ public class Update<T> {
     /**
      * column = value:String
      */
-    public UpdateWhere<T> whereEq(Column<String> column, String value) {
+    public UpdateWhere<T> whereEq(Field<String> column, String value) {
         final UpdateWhere updateWhere = new UpdateWhere(this);
         updateWhere.eq(column, value);
         return updateWhere;
@@ -82,7 +83,7 @@ public class Update<T> {
     /**
      * column = value:Number
      */
-    public UpdateWhere<T> whereEq(Column<? extends Number> column, Number value) {
+    public UpdateWhere<T> whereEq(Field<? extends Number> column, Number value) {
         final UpdateWhere updateWhere = new UpdateWhere(this);
         updateWhere.eq(column, value);
         return updateWhere;
@@ -90,7 +91,7 @@ public class Update<T> {
     /**
      * column <> value:String
      */
-    public UpdateWhere<T> whereNe(Column<String> column, String value) {
+    public UpdateWhere<T> whereNe(Field<String> column, String value) {
         final UpdateWhere updateWhere = new UpdateWhere(this);
         updateWhere.ne(column, value);
         return updateWhere;
@@ -98,7 +99,7 @@ public class Update<T> {
     /**
      * column <> value:Number
      */
-    public UpdateWhere<T> whereNe(Column<? extends Number> column, Number value) {
+    public UpdateWhere<T> whereNe(Field<? extends Number> column, Number value) {
         final UpdateWhere updateWhere = new UpdateWhere(this);
         updateWhere.ne(column, value);
         return updateWhere;
@@ -106,7 +107,7 @@ public class Update<T> {
     /**
      * column like value:String
      */
-    public UpdateWhere<T> whereLike(Column<String> column, String value) {
+    public UpdateWhere<T> whereLike(Field<String> column, String value) {
         final UpdateWhere updateWhere = new UpdateWhere(this);
         updateWhere.like(column, value);
         return updateWhere;
@@ -114,7 +115,7 @@ public class Update<T> {
     /**
      * column > value:Number
      */
-    public UpdateWhere<T> whereGt(Column<String> column, Number value) {
+    public UpdateWhere<T> whereGt(Field<String> column, Number value) {
         final UpdateWhere updateWhere = new UpdateWhere(this);
         updateWhere.gt(column, value);
         return updateWhere;
@@ -122,7 +123,7 @@ public class Update<T> {
     /**
      * column >= value:Number
      */
-    public UpdateWhere<T> whereGe(Column<String> column, Number value) {
+    public UpdateWhere<T> whereGe(Field<String> column, Number value) {
         final UpdateWhere updateWhere = new UpdateWhere(this);
         updateWhere.ge(column, value);
         return updateWhere;
@@ -130,7 +131,7 @@ public class Update<T> {
     /**
      * column < value:Number
      */
-    public UpdateWhere<T> whereLt(Column<String> column, Number value) {
+    public UpdateWhere<T> whereLt(Field<String> column, Number value) {
         final UpdateWhere updateWhere = new UpdateWhere(this);
         updateWhere.lt(column, value);
         return updateWhere;
@@ -138,7 +139,7 @@ public class Update<T> {
     /**
      * column <= value:Number
      */
-    public UpdateWhere<T> whereLe(Column<String> column, Number value) {
+    public UpdateWhere<T> whereLe(Field<String> column, Number value) {
         final UpdateWhere updateWhere = new UpdateWhere(this);
         updateWhere.le(column, value);
         return updateWhere;

@@ -24,12 +24,12 @@ public class SelectSegment<T> extends Select<Segment<T>> {
     }
 
     @Override
-    protected void appendColumns(StringBuilder sb) {
+    protected void appendColumnsTo(StringBuilder sql) {
         for (Column column : columns) {
-            sb.append(column.name);
-            sb.append(',');
+            sql.append(column.name);
+            sql.append(',');
         }
-        sb.deleteCharAt(sb.length()-1);
+        sql.deleteCharAt(sql.length()-1);
     }
 
     @Override

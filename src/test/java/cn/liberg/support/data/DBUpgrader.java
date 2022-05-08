@@ -6,34 +6,35 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 public class DBUpgrader extends DBImpl {
     private static final Logger logger = LoggerFactory.getLogger(DBUpgrader.class);
 
-
     public DBUpgrader(IDataBaseConf dbConf) {
         super(dbConf);
     }
 
-    @Override
-    public int upgrade(Statement stat, int dbVersion, int newVersion) {
-        Class clazz = this.getClass();
-        int version = dbVersion;
-        try {
-            while(version<newVersion) {
-                version++;
-                Method method = clazz.getDeclaredMethod("upgradeTo" + version);
-                if(method != null) {
-                    method.invoke(this, stat);
-                }
+    public int upgrade(Statement stat, int dbVersion, int newVersion) throws SQLException {
+        Class<? extends DBUpgrader> clazz = this.getClass();
+        String clazzName = clazz.getSimpleName();
+        int result = dbVersion;
+        for (int i = dbVersion + 1; i <= newVersion; i++) {
+            try {
+                Method method = clazz.getDeclaredMethod("upgradeTo" + i, Statement.class);
+                method.invoke(this, stat);
+                result = i;
+            } catch(NoSuchMethodException e) {
+                //skip
+                logger.warn(clazz.getSimpleName()+" upgradeTo" + i + ": no such method.");
+            } catch (Exception e) {
+                logger.error(clazzName+" failed:" + super.getName() +
+                        ". version=" + result + ", expectedVersion=" + newVersion, e);
+                break;
             }
-        } catch (Exception e) {
-            version--;
-            logger.error("DBUpgrader failed:" + super.getName() +
-                    ". version=" + version + ", expectedVersion=" + newVersion, e);
         }
-        return version;
+        return result;
     }
 
     private TableAlteration alter(String tableName) {

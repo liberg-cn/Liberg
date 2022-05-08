@@ -10,15 +10,10 @@ import java.sql.SQLException;
  *
  * @author Liberg
  */
-public class StringColumn extends Column {
+public abstract class StringColumn<E> extends Column<E, String> {
 
     public StringColumn(String entityFieldName, String shortName) {
         super(entityFieldName, shortName);
-    }
-
-    @Override
-    public ColumnType type() {
-        return ColumnType.String;
     }
 
     @Override

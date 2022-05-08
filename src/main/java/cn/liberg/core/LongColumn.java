@@ -8,15 +8,10 @@ import java.sql.SQLException;
  *
  * @author Liberg
  */
-public class LongColumn extends Column {
+public abstract class LongColumn<E> extends Column<E, Long> {
 
     public LongColumn(String entityFieldName, String shortName) {
         super(entityFieldName, shortName);
-    }
-
-    @Override
-    public ColumnType type() {
-        return ColumnType.Long;
     }
 
     @Override

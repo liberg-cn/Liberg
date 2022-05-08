@@ -9,17 +9,18 @@ package cn.liberg.database;
  * @see Condition
  */
 public class Joints {
-    public static final WhereMeta AND = new LogicalOperator("and");
-    public static final WhereMeta OR = new LogicalOperator("or");
-    public static final WhereMeta NOT = new LogicalOperator("not");
 
-    public static final WhereMeta BRACKET_START = new WhereMeta("(") {
+    public static final WhereMeta AND = new LogicalOperator(WhereMeta.AND);
+    public static final WhereMeta OR = new LogicalOperator(WhereMeta.OR);
+    public static final WhereMeta NOT = new LogicalOperator(WhereMeta.NOT);
+
+    public static final WhereMeta BRACKET_START = new WhereMeta(WhereMeta.BRACKET_START) {
         @Override
         public boolean isStartBracket() {
             return true;
         }
     };
-    public static final WhereMeta BRACKET_END = new WhereMeta(")") {
+    public static final WhereMeta BRACKET_END = new WhereMeta(WhereMeta.BRACKET_END) {
         @Override
         public boolean isEndBracket() {
             return true;

@@ -2,6 +2,7 @@ package cn.liberg.database;
 
 
 import cn.liberg.core.Column;
+import cn.liberg.core.Field;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +19,7 @@ import java.util.List;
 public class TableBuilder {
     private String tableName;
     private StringBuilder sb;
-    private List<Column> listIndex;
+    private List<Field> listIndex;
 
     public TableBuilder(String tableName) {
         this.tableName = tableName;
@@ -29,19 +30,19 @@ public class TableBuilder {
         listIndex = new ArrayList<>();
     }
 
-    public void add(Column column, String type) {
+    public void add(Field column, String type) {
         add(column, false, type, null);
     }
 
-    public void add(Column column, String type, String comment) {
+    public void add(Field column, String type, String comment) {
         add(column, false, type, comment);
     }
 
-    public void add(Column column, boolean isIndex, String type) {
+    public void add(Field column, boolean isIndex, String type) {
         add(column, isIndex, type, null);
     }
 
-    public void add(Column column, boolean isIndex, String type, String comment) {
+    public void add(Field column, boolean isIndex, String type, String comment) {
         sb.append(column.name);
         sb.append(" ");
         sb.append(type);
@@ -57,7 +58,7 @@ public class TableBuilder {
     }
 
     public String build() {
-        for(Column column : listIndex) {
+        for(Field column : listIndex) {
             sb.append("KEY `");
             sb.append(tableName);
             sb.append('_');

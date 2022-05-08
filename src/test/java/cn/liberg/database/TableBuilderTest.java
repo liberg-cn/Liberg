@@ -1,10 +1,16 @@
 package cn.liberg.database;
 
 import cn.liberg.core.Column;
+import cn.liberg.core.Field;
+import cn.liberg.core.IntegerColumn;
 import cn.liberg.core.StringColumn;
 import cn.liberg.support.data.DBConfig;
 import cn.liberg.support.data.DBImpl;
 import org.junit.Test;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
 import static org.junit.Assert.assertEquals;
 
 public class TableBuilderTest {
@@ -13,10 +19,24 @@ public class TableBuilderTest {
     public void testBuild() {
         DBImpl dbImpl = new DBImpl(new DBConfig());
 
-        Column columnName = new StringColumn("name", "n");
-        Column columnPassword = new StringColumn("password", "n");
-        Column columnAge = new StringColumn("age", "a");
-
+        Field<String> columnName = new Field<String>("name", "n"){
+            @Override
+            public String getValue(ResultSet rs, int columnIndex) throws SQLException {
+                return null;
+            }
+        };
+        Field<String> columnPassword = new Field<String>("password", "n"){
+            @Override
+            public String getValue(ResultSet rs, int columnIndex) throws SQLException {
+                return null;
+            }
+        };
+        Field<Integer> columnAge = new Field<Integer>("age", "a"){
+            @Override
+            public Integer getValue(ResultSet rs, int columnIndex) throws SQLException {
+                return null;
+            }
+        };
 
         TableBuilder tb = new TableBuilder("user");
         tb.add(columnName, true, dbImpl.typeString(63), "名称");

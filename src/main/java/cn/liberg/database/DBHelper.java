@@ -1,8 +1,6 @@
 package cn.liberg.database;
 
-import cn.liberg.core.Column;
-import cn.liberg.core.OperatorException;
-import cn.liberg.core.StatusCode;
+import cn.liberg.core.*;
 import cn.liberg.database.join.JoinResult;
 import com.mysql.cj.jdbc.exceptions.CommunicationsException;
 import org.slf4j.Logger;
@@ -23,7 +21,7 @@ public class DBHelper {
     private static final Logger logger = LoggerFactory.getLogger(DBHelper.class);
     private static volatile DBHelper selfInstance = null;
 
-    public static final String VERSION = "1.3.2";
+    public static final String VERSION = "2.0.0";
     public IDataBaseConf dbConf = null;
     boolean initialized = false;
 
@@ -128,7 +126,7 @@ public class DBHelper {
             long generatedId = 0;
             if(rs.next()) {
                 generatedId = rs.getLong(1);
-                dao.setEntityId(entity, generatedId);
+                dao.getIdColumn().set(entity, generatedId);
             }
             return generatedId;
         } catch (SQLException e) {
@@ -266,7 +264,7 @@ public class DBHelper {
             conn = dbConnector.getConnect();
             ps = conn.prepareStatement(dao.SQL0_UPDATE_BY_ID);
             dao.fillPreparedStatement(entity, ps);
-            ps.setLong(dao.getColumnCount(), dao.getEntityId(entity));
+            ps.setLong(dao.getColumnCount(), dao.getIdColumn().get(entity));
             ps.executeUpdate();
         } catch (SQLException e) {
             isTxError = isTxError(e);
@@ -279,18 +277,37 @@ public class DBHelper {
     /**
      * 更新entity中指定的列到数据库
      */
+    public <T> void incrementById(BaseDao dao, Field<? extends Number> field, int diff, long id) throws OperatorException {
+        StringBuilder sb = new StringBuilder("update ");
+        sb.append(dao.getTableName());
+        sb.append(" set ");
+        sb.append(field.name);
+        sb.append(Condition.EQ);
+        sb.append(field.name);
+        if(diff >= 0) {
+            sb.append('+');
+        }
+        sb.append(diff);
+        sb.append(" where id=");
+        sb.append(id);
+        executeSql(sb.toString());
+    }
+
+    /**
+     * 更新entity中指定的列到数据库
+     */
     public <T> void update(T entity, BaseDao dao, Column... columns) throws OperatorException {
         StringBuilder sb = new StringBuilder(32);
         for (Column column : columns) {
             sb.append(column.name);
             sb.append('=');
-            sb.append(SqlDefender.format(column.getEntityValue(entity)));
+            sb.append(SqlDefender.format(column.get(entity)));
             sb.append(',');
         }
         if (sb.length() > 0) {
             sb.deleteCharAt(sb.length() - 1);
             String sql = String.format("update %1$s set %2$s where id=%3$s",
-                    dao.getTableName(), sb.toString(), dao.getEntityId(entity));
+                    dao.getTableName(), sb.toString(), dao.getIdColumn().get(entity));
             executeSql(sql);
         }
     }
@@ -305,7 +322,7 @@ public class DBHelper {
             if (!excludes.contains(column)) {
                 sb.append(column.name);
                 sb.append('=');
-                sb.append(SqlDefender.format(column.getEntityValue(entity)));
+                sb.append(SqlDefender.format(column.get(entity)));
                 sb.append(',');
             }
         }
@@ -313,7 +330,7 @@ public class DBHelper {
             sb.deleteCharAt(sb.length() - 1);
         }
         String sql = String.format("update %1$s set %2$s where id=%3$s",
-                dao.getTableName(), sb.toString(), dao.getEntityId(entity));
+                dao.getTableName(), sb.toString(), dao.getIdColumn().get(entity));
         executeSql(sql);
     }
 
@@ -323,7 +340,7 @@ public class DBHelper {
     }
 
     public <T> void delete(BaseDao<T> dao, T obj) throws OperatorException {
-        long id = dao.getEntityId(obj);
+        long id = dao.getIdColumn().get(obj);
         delete(dao, id);
     }
 
@@ -436,8 +453,9 @@ public class DBHelper {
         try {
             conn = dbConnector.getConnect();
             long id;
+            final Column<T, Long> columnId = dao.getIdColumn();
             for (T entity : entityList) {
-                if((id = dao.getEntityId(entity)) > 0) {
+                if((id = columnId.get(entity)) > 0) {
                     if(psUpdate == null) {
                         psUpdate = conn.prepareStatement(dao.SQL0_UPDATE_BY_ID);
                     }
@@ -452,7 +470,7 @@ public class DBHelper {
                     psSave.executeUpdate();
                     rs = psSave.getGeneratedKeys();
                     if (rs.next()) {
-                        dao.setEntityId(entity, rs.getLong(1));
+                        columnId.set(entity, rs.getLong(1));
                     }
                 }
             }
@@ -490,15 +508,15 @@ public class DBHelper {
         }
     }
 
-    private List<String> buildSaveOrUpdateSqls(BaseDao dao, List<?> objs) throws OperatorException {
+    private <T> List<String> buildSaveOrUpdateSqls(BaseDao<T> dao, List<T> objs) throws OperatorException {
         List<String> sqls = new ArrayList<>(objs.size());
         String sql;
-        for (Object obj : objs) {
-            long id = dao.getEntityId(obj);
+        for (T entity : objs) {
+            long id = dao.getIdColumn().get(entity);
             if (id > 0) {
-                sql = buildUpdateSql(obj, dao);
+                sql = buildUpdateSql(entity, dao);
             } else {
-                sql = buildSaveSql(obj, dao);
+                sql = buildSaveSql(entity, dao);
             }
             if (sql != null) {
                 sqls.add(sql);
@@ -509,13 +527,13 @@ public class DBHelper {
 
     public static <T> String buildUpdateSql(T entity, BaseDao<T> dao) throws OperatorException {
         StringBuilder sb = new StringBuilder();
-        long id = dao.getEntityId(entity);
+        long id = dao.getIdColumn().get(entity);
         final List<Column> columns = dao.getColumns();
         if(columns.size() > 0) {
             for (Column column : columns) {
                 sb.append(column.name);
                 sb.append('=');
-                sb.append(SqlDefender.format(column.getEntityValue(entity)));
+                sb.append(SqlDefender.format(column.get(entity)));
                 sb.append(',');
             }
             sb.deleteCharAt(sb.length() - 1);
@@ -531,7 +549,7 @@ public class DBHelper {
         final List<Column> columns = dao.getColumns();
         if(columns.size()> 0) {
             for (Column column : columns) {
-                sb.append(SqlDefender.format(column.getEntityValue(entity)));
+                sb.append(SqlDefender.format(column.get(entity)));
                 sb.append(',');
             }
             sb.deleteCharAt(sb.length()-1);
@@ -545,7 +563,7 @@ public class DBHelper {
     /**
      * 有返回结果的事务
      */
-    public <R> R transaction(TransactionCallback<R> callback) throws OperatorException {
+    public <R> R transaction(TransactionCallWithResult<R> callback) throws OperatorException {
         R result;
         beginTransact();
         try {
@@ -561,7 +579,7 @@ public class DBHelper {
     /**
      * 无返回结果的事务
      */
-    public void transaction(TransactionCallbackWithoutResult callback) throws OperatorException {
+    public void transaction(TransactionCall callback) throws OperatorException {
         beginTransact();
         try {
             callback.execute();

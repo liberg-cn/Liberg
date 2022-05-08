@@ -132,7 +132,7 @@ public class DaoTest {
     @Test
     public void testGetAllUsers() throws OperatorException {
         UserDao dao = UserDao.self();
-        List<User> users = dao.getGts(dao.columnId, 0);
+        List<User> users = dao.getGts(dao.columnId, 0, 100);
 
     }
 

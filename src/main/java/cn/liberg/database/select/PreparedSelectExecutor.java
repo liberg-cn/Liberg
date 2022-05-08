@@ -1,6 +1,7 @@
 package cn.liberg.database.select;
 
 import cn.liberg.core.Column;
+import cn.liberg.core.Field;
 import cn.liberg.core.OperatorException;
 import cn.liberg.core.StatusCode;
 import cn.liberg.database.DBHelper;
@@ -15,23 +16,20 @@ import java.util.Map;
  * Prepare方式select的实际执行类。
  *
  * @param <T>
- *
  * @author Liberg
  */
 public class PreparedSelectExecutor<T> implements AutoCloseable {
     private final PreparedSelect<T> select;
-    private PreparedStatement preparedStatement = null;
-    private Map<Column, Integer> indexMap = null;
-    private boolean limited = false;
-    private long defaultLimitStart;
-    private int defaultLimitCount;
+    private PreparedStatement preparedStatement;
+    private Map<String, NextIndex> indexMap;
+    //除去 limit ?,?部分，占位符的个数
+    private final int $length;
 
     public PreparedSelectExecutor(PreparedSelect<T> select, PreparedSelectWhere selectWhere) throws OperatorException {
         this.select = select;
         preparedStatement = DBHelper.self().prepareStatement(selectWhere.buildSql());
         indexMap = selectWhere.indexMap;
-        defaultLimitStart = selectWhere.limitStart;
-        defaultLimitCount = selectWhere.limitCount;
+        $length = selectWhere.$length;
     }
 
     @Override
@@ -47,49 +45,52 @@ public class PreparedSelectExecutor<T> implements AutoCloseable {
         preparedStatement = null;
     }
 
-    public void setParameter(Column<String> column, String value) throws OperatorException {
-        Integer index = indexMap.get(column);
-        if(index == null) {
-            throw new OperatorException(StatusCode.PARAMS_INVALID, "Column:"+column.name+" is not prepared.");
+    public void setParameter(Field<String> column, String value) throws OperatorException {
+        NextIndex nIdx = indexMap.get(column.name);
+        if (nIdx == null) {
+            throw new OperatorException(StatusCode.PARAMS_INVALID, "Column:" + column.name + " is not prepared.");
         }
         try {
-            preparedStatement.setString(index, value);
+            preparedStatement.setString(nIdx.next(), value);
         } catch (SQLException e) {
             close();
             throw new OperatorException(StatusCode.ERROR_DB, e);
         }
     }
-    public void setParameter(Column<Byte> column, byte value) throws OperatorException {
-        Integer index = indexMap.get(column);
-        if(index == null) {
-            throw new OperatorException(StatusCode.PARAMS_INVALID, "Column:"+column.name+" is not prepared.");
+
+    public void setParameter(Field<Byte> column, byte value) throws OperatorException {
+        NextIndex nIdx = indexMap.get(column.name);
+        if (nIdx == null) {
+            throw new OperatorException(StatusCode.PARAMS_INVALID, "Column:" + column.name + " is not prepared.");
         }
         try {
-            preparedStatement.setByte(index, value);
+            preparedStatement.setByte(nIdx.next(), value);
         } catch (SQLException e) {
             close();
             throw new OperatorException(StatusCode.ERROR_DB, e);
         }
     }
-    public void setParameter(Column<Integer> column, int value) throws OperatorException {
-        Integer index = indexMap.get(column);
-        if(index == null) {
-            throw new OperatorException(StatusCode.PARAMS_INVALID, "Column:"+column.name+" is not prepared.");
+
+    public void setParameter(Field<Integer> column, int value) throws OperatorException {
+        NextIndex nIdx = indexMap.get(column.name);
+        if (nIdx == null) {
+            throw new OperatorException(StatusCode.PARAMS_INVALID, "Column:" + column.name + " is not prepared.");
         }
         try {
-            preparedStatement.setInt(index, value);
+            preparedStatement.setInt(nIdx.next(), value);
         } catch (SQLException e) {
             close();
             throw new OperatorException(StatusCode.ERROR_DB, e);
         }
     }
-    public void setParameter(Column<Long> column, long value) throws OperatorException {
-        Integer index = indexMap.get(column);
-        if(index == null) {
-            throw new OperatorException(StatusCode.PARAMS_INVALID, "Column:"+column.name+" is not prepared.");
+
+    public void setParameter(Field<Long> column, long value) throws OperatorException {
+        NextIndex nIdx = indexMap.get(column.name);
+        if (nIdx == null) {
+            throw new OperatorException(StatusCode.PARAMS_INVALID, "Column:" + column.name + " is not prepared.");
         }
         try {
-            preparedStatement.setLong(index, value);
+            preparedStatement.setLong(nIdx.next(), value);
         } catch (SQLException e) {
             close();
             throw new OperatorException(StatusCode.ERROR_DB, e);
@@ -98,22 +99,21 @@ public class PreparedSelectExecutor<T> implements AutoCloseable {
 
     private void setLimit(long limitStart, int limitCount) throws OperatorException {
         try {
-            int index = indexMap.size();
-            preparedStatement.setLong(++index, limitStart);
-            preparedStatement.setInt(++index, limitCount);
-            limited = true;
+            preparedStatement.setLong($length + 1, limitStart);
+            preparedStatement.setInt($length + 2, limitCount);
         } catch (SQLException e) {
             close();
             throw new OperatorException(StatusCode.ERROR_DB, e);
         }
     }
+
     private void setLimit(int limitCount) throws OperatorException {
-        setLimit(defaultLimitStart, limitCount);
+        setLimit(0, limitCount);
     }
 
 
     public T one() throws OperatorException {
-        setLimit(1);
+        setLimit(0, 1);
         try {
             ResultSet rs = preparedStatement.executeQuery();
             return select.readOne(rs);
@@ -123,10 +123,8 @@ public class PreparedSelectExecutor<T> implements AutoCloseable {
         }
     }
 
-    public List<T> all() throws OperatorException {
-        if(!limited) {
-            setLimit(defaultLimitStart, defaultLimitCount);
-        }
+    private List<T> allWithLimit(int limitStart, int limitCount) throws OperatorException {
+        setLimit(limitStart, limitCount);
         try {
             ResultSet rs = preparedStatement.executeQuery();
             return select.readAll(rs);
@@ -136,9 +134,28 @@ public class PreparedSelectExecutor<T> implements AutoCloseable {
         }
     }
 
+    public List<T> all(int limitCount) throws OperatorException {
+        return allWithLimit(0, limitCount);
+    }
+
     public List<T> page(int pageNum, int pageSize) throws OperatorException {
-        setLimit((pageNum-1)*pageSize, pageSize);
-        return all();
+        return allWithLimit((pageNum - 1) * pageSize, pageSize);
+    }
+
+    public List<T> allFill(int limitCount) throws OperatorException {
+        List<T> list = allWithLimit(0, limitCount);
+        for (T e : list) {
+            select.dao.fillData(e);
+        }
+        return list;
+    }
+
+    public List<T> pageFill(int pageNum, int pageSize) throws OperatorException {
+        List<T> list = allWithLimit((pageNum - 1) * pageSize, pageSize);
+        for (T e : list) {
+            select.dao.fillData(e);
+        }
+        return list;
     }
 
 }

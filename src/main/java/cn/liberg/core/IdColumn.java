@@ -5,9 +5,10 @@ package cn.liberg.core;
  *
  * @author Liberg
  */
-public class IdColumn extends LongColumn {
+public abstract class IdColumn<E> extends LongColumn<E> {
 
     public IdColumn() {
         super(ID, ID);
     }
+
 }

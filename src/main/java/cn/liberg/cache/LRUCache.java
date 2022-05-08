@@ -4,7 +4,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 基于{@link java.util.LinkedHashMap}的LRU(Least Recently Used)缓存
+ * 非线程安全的LRU(Least Recently Used)缓存实现
+ * 基于{@link java.util.LinkedHashMap}
  *
  * @param <K>
  * @param <V>
@@ -45,9 +46,9 @@ public class LRUCache<K, V> extends LinkedHashMap<K, V> {
             sb.append(size()-count);
             sb.append("more");
         }
-        return "LRUCache{" +
+        return this.getClass().getSimpleName() + "{" +
                 "capacity=" + capacity +
-                ", entrys=[" + sb.toString() + "]}";
+                ", entries=[" + sb.toString() + "]}";
     }
 
 }

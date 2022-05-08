@@ -1,6 +1,7 @@
 package cn.liberg.database.select;
 
 import cn.liberg.core.Column;
+import cn.liberg.core.Field;
 import cn.liberg.database.BaseDao;
 
 import java.sql.ResultSet;
@@ -75,7 +76,7 @@ public class PreparedSelect<T> {
     /**
      * column > ?:Number
      */
-    public PreparedSelectWhere<T> whereGt$(Column<? extends Number> column) {
+    public PreparedSelectWhere<T> whereGt$(Field<? extends Number> column) {
         final PreparedSelectWhere psw = new PreparedSelectWhere(this);
         psw.gt$(column);
         return psw;
@@ -83,7 +84,7 @@ public class PreparedSelect<T> {
     /**
      * column >= ?:Number
      */
-    public PreparedSelectWhere<T> whereGe$(Column<? extends Number> column) {
+    public PreparedSelectWhere<T> whereGe$(Field<? extends Number> column) {
         final PreparedSelectWhere psw = new PreparedSelectWhere(this);
         psw.ge$(column);
         return psw;
@@ -91,7 +92,7 @@ public class PreparedSelect<T> {
     /**
      * column < ?:Number
      */
-    public PreparedSelectWhere<T> whereLt$(Column<? extends Number> column) {
+    public PreparedSelectWhere<T> whereLt$(Field<? extends Number> column) {
         final PreparedSelectWhere psw = new PreparedSelectWhere(this);
         psw.lt$(column);
         return psw;
@@ -99,7 +100,7 @@ public class PreparedSelect<T> {
     /**
      * column <= ?:Number
      */
-    public PreparedSelectWhere<T> whereLe$(Column<? extends Number> column) {
+    public PreparedSelectWhere<T> whereLe$(Field<? extends Number> column) {
         final PreparedSelectWhere psw = new PreparedSelectWhere(this);
         psw.le$(column);
         return psw;
@@ -122,11 +123,12 @@ public class PreparedSelect<T> {
     }
 
     protected T readOne(ResultSet resultSet) throws SQLException {
+        T entity = null;
         if(resultSet.next()) {
-            return dao.buildEntity(resultSet);
-        } else {
-            return null;
+            entity = dao.buildEntity(resultSet);
+            dao.putToCache(entity);
         }
+        return entity;
     }
 
     protected List<T> readAll(ResultSet resultSet) throws SQLException {

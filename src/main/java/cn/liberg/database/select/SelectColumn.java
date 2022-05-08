@@ -1,6 +1,6 @@
 package cn.liberg.database.select;
 
-import cn.liberg.core.Column;
+import cn.liberg.core.Field;
 import cn.liberg.database.BaseDao;
 
 import java.sql.ResultSet;
@@ -11,25 +11,25 @@ import java.util.List;
 /**
  * 列查询
  *
- * @param <T> 泛型参数，代表查询列的数据类型
+ * @param <F> 泛型参数，代表查询列的数据类型
  *
  * @author Liberg
  */
-public class SelectColumn<T> extends Select<T> {
-    private Column<T> column;
+public class SelectColumn<F> extends Select<F> {
+    private Field<F> column;
 
-    public SelectColumn(BaseDao dao, Column<T> column) {
+    public SelectColumn(BaseDao dao, Field<F> column) {
         super(dao);
         this.column = column;
     }
 
     @Override
-    protected void appendColumns(StringBuilder sb) {
-        sb.append(column.name);
+    protected void appendColumnsTo(StringBuilder sql) {
+        sql.append(column.name);
     }
 
     @Override
-    public T readOne(ResultSet resultSet) throws SQLException {
+    public F readOne(ResultSet resultSet) throws SQLException {
         if(resultSet.next()) {
             return column.getValue(resultSet, 1);
         } else {
@@ -38,8 +38,8 @@ public class SelectColumn<T> extends Select<T> {
     }
 
     @Override
-    public List<T> readAll(ResultSet resultSet) throws SQLException {
-        List<T> list = new ArrayList<>();
+    public List<F> readAll(ResultSet resultSet) throws SQLException {
+        List<F> list = new ArrayList<>();
         while (resultSet.next()) {
             list.add(column.getValue(resultSet, 1));
         }

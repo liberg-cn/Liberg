@@ -1,6 +1,6 @@
 package cn.liberg.database.select;
 
-import cn.liberg.core.Column;
+import cn.liberg.core.Field;
 import cn.liberg.database.BaseDao;
 
 import java.sql.ResultSet;
@@ -35,17 +35,17 @@ public class Select<T> {
     }
 
     protected StringBuilder build() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("select ");
-        appendColumns(sb);
-        sb.append(" from ");
-        sb.append(dao.getTableName());
-        return sb;
+        StringBuilder sql = new StringBuilder(256);
+        sql.append("select ");
+        appendColumnsTo(sql);
+        sql.append(" from ");
+        sql.append(dao.getTableName());
+        return sql;
     }
 
-    protected void appendColumns(StringBuilder sb) {
-        sb.append("id,");
-        sb.append(dao.getColumnsString());
+    protected void appendColumnsTo(StringBuilder sql) {
+        sql.append("id,");
+        sql.append(dao.getColumnsString());
     }
 
     /**
@@ -58,7 +58,7 @@ public class Select<T> {
     /**
      * column = value:String
      */
-    public SelectWhere<T> whereEq(Column<String> column, String value) {
+    public SelectWhere<T> whereEq(Field<String> column, String value) {
         final SelectWhere selectWhere = new SelectWhere(this);
         selectWhere.eq(column, value);
         return selectWhere;
@@ -66,7 +66,7 @@ public class Select<T> {
     /**
      * column = value:Number
      */
-    public SelectWhere<T> whereEq(Column<? extends Number> column, Number value) {
+    public SelectWhere<T> whereEq(Field<? extends Number> column, Number value) {
         final SelectWhere selectWhere = new SelectWhere(this);
         selectWhere.eq(column, value);
         return selectWhere;
@@ -74,7 +74,7 @@ public class Select<T> {
     /**
      * column <> value:String
      */
-    public SelectWhere<T> whereNe(Column<String> column, String value) {
+    public SelectWhere<T> whereNe(Field<String> column, String value) {
         final SelectWhere selectWhere = new SelectWhere(this);
         selectWhere.ne(column, value);
         return selectWhere;
@@ -82,7 +82,7 @@ public class Select<T> {
     /**
      * column <> value:Number
      */
-    public SelectWhere<T> whereNe(Column<? extends Number> column, Number value) {
+    public SelectWhere<T> whereNe(Field<? extends Number> column, Number value) {
         final SelectWhere selectWhere = new SelectWhere(this);
         selectWhere.ne(column, value);
         return selectWhere;
@@ -90,7 +90,7 @@ public class Select<T> {
     /**
      * column like value:String
      */
-    public SelectWhere<T> whereLike(Column<String> column, String value) {
+    public SelectWhere<T> whereLike(Field<String> column, String value) {
         final SelectWhere selectWhere = new SelectWhere(this);
         selectWhere.like(column, value);
         return selectWhere;
@@ -98,7 +98,7 @@ public class Select<T> {
     /**
      * column > value:Number
      */
-    public SelectWhere<T> whereGt(Column<? extends Number> column, Number value) {
+    public SelectWhere<T> whereGt(Field<? extends Number> column, Number value) {
         final SelectWhere selectWhere = new SelectWhere(this);
         selectWhere.gt(column, value);
         return selectWhere;
@@ -106,7 +106,7 @@ public class Select<T> {
     /**
      * column >= value:Number
      */
-    public SelectWhere<T> whereGe(Column<? extends Number> column, Number value) {
+    public SelectWhere<T> whereGe(Field<? extends Number> column, Number value) {
         final SelectWhere selectWhere = new SelectWhere(this);
         selectWhere.ge(column, value);
         return selectWhere;
@@ -114,7 +114,7 @@ public class Select<T> {
     /**
      * column < value:Number
      */
-    public SelectWhere<T> whereLt(Column<? extends Number> column, Number value) {
+    public SelectWhere<T> whereLt(Field<? extends Number> column, Number value) {
         final SelectWhere selectWhere = new SelectWhere(this);
         selectWhere.lt(column, value);
         return selectWhere;
@@ -122,7 +122,7 @@ public class Select<T> {
     /**
      * column <= value:Number
      */
-    public SelectWhere<T> whereLe(Column<? extends Number> column, Number value) {
+    public SelectWhere<T> whereLe(Field<? extends Number> column, Number value) {
         final SelectWhere selectWhere = new SelectWhere(this);
         selectWhere.le(column, value);
         return selectWhere;
@@ -145,11 +145,12 @@ public class Select<T> {
     }
 
     public T readOne(ResultSet resultSet) throws SQLException {
+        T entity = null;
         if(resultSet.next()) {
-            return dao.buildEntity(resultSet);
-        } else {
-            return null;
+            entity = dao.buildEntity(resultSet);
+            dao.putToCache(entity);
         }
+        return entity;
     }
 
     public List<T> readAll(ResultSet resultSet) throws SQLException {

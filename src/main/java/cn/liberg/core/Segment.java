@@ -25,8 +25,8 @@ public class Segment<T> extends HashMap<String, Object> {
         super(initialCapacity);
     }
 
-    public <R> R get(Column<R> column) {
-        return (R) get(column.shortName);
+    public <F> F get(Field<F> field) {
+        return (F) get(field.shortName);
     }
 
     @Override

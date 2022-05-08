@@ -1,6 +1,7 @@
 package cn.liberg.database.select;
 
 import cn.liberg.core.Column;
+import cn.liberg.core.Field;
 import cn.liberg.database.SqlDefender;
 import cn.liberg.database.Condition;
 import cn.liberg.database.Joints;
@@ -18,8 +19,11 @@ import java.util.Map;
  */
 public class PreparedWhere<T extends PreparedWhere> {
     protected List<WhereMeta> criteriaList = new ArrayList<>();
-    protected Map<Column, Integer> indexMap = new HashMap<>();
+    protected Map<String, NextIndex> indexMap = new HashMap<>();
+    // 占位符
     public static final String $ = "?";
+    // 占位符的个数
+    protected int $length = 0;
 
     protected StringBuilder buildCondition() {
         StringBuilder sb = new StringBuilder();
@@ -37,19 +41,19 @@ public class PreparedWhere<T extends PreparedWhere> {
     /**
      * equals or not
      */
-    public T eq(Column<String> column, String value) {
+    public T eq(Field<String> column, String value) {
         return _add(column, Condition.EQ, SqlDefender.format(value));
     }
 
-    public T eq(Column<? extends Number> column, Number value) {
+    public T eq(Field<? extends Number> column, Number value) {
         return _add(column, Condition.EQ, "" + value);
     }
 
-    public T ne(Column<String> column, String value) {
+    public T ne(Field<String> column, String value) {
         return _add(column, Condition.NE, SqlDefender.format(value));
     }
 
-    public T ne(Column<? extends Number> column, Number value) {
+    public T ne(Field<? extends Number> column, Number value) {
         return _add(column, Condition.NE, "" + value);
     }
 
@@ -68,47 +72,47 @@ public class PreparedWhere<T extends PreparedWhere> {
     /**
      * like
      */
-    public T like(Column<String> column, String value) {
+    public T like(Field<String> column, String value) {
         return _add(column, Condition.LIKE, SqlDefender.format(value));
     }
 
-    public T like$(Column<String> column) {
+    public T like$(Field<String> column) {
         return _add(column, Condition.LIKE);
     }
 
     /**
      * great equal or great than
      */
-    public T ge(Column<? extends Number> column, Number value) {
+    public T ge(Field<? extends Number> column, Number value) {
         return _add(column, Condition.GE, "" + value);
     }
 
-    public T gt(Column<? extends Number> column, Number value) {
+    public T gt(Field<? extends Number> column, Number value) {
         return _add(column, Condition.GT, "" + value);
     }
 
-    public T ge$(Column<? extends Number> column) {
+    public T ge$(Field<? extends Number> column) {
         return _add(column, Condition.GE);
     }
-    public T gt$(Column<? extends Number> column) {
+    public T gt$(Field<? extends Number> column) {
         return _add(column, Condition.GT);
     }
 
     /**
      * less equal or less than
      */
-    public T le(Column<? extends Number> column, Number value) {
+    public T le(Field<? extends Number> column, Number value) {
         return _add(column, Condition.LE, "" + value);
     }
 
-    public T lt(Column<? extends Number> column, Number value) {
+    public T lt(Field<? extends Number> column, Number value) {
         return _add(column, Condition.LT, "" + value);
     }
 
-    public T le$(Column<? extends Number> column) {
+    public T le$(Field<? extends Number> column) {
         return _add(column, Condition.LE);
     }
-    public T lt$(Column<? extends Number> column) {
+    public T lt$(Field<? extends Number> column) {
         return _add(column, Condition.LT);
     }
 
@@ -140,7 +144,7 @@ public class PreparedWhere<T extends PreparedWhere> {
         return (T) this;
     }
 
-    protected T _add(Column column, String link, String value) {
+    protected T _add(Field column, String link, String value) {
         // 两个Condition之间未指定逻辑运算符时，默认用and
         if (criteriaList.size() > 0 && criteriaList.get(criteriaList.size() - 1).isCondition()) {
             criteriaList.add(Joints.AND);
@@ -148,14 +152,21 @@ public class PreparedWhere<T extends PreparedWhere> {
         criteriaList.add(new Condition(column.name, link, value));
         return (T) this;
     }
-    protected T _add(Column column, String link) {
+
+    //value用占位符代替
+    protected T _add(Field column, String link) {
         // 两个Condition之间未指定逻辑运算符时，默认用and
         if (criteriaList.size() > 0 && criteriaList.get(criteriaList.size() - 1).isCondition()) {
             criteriaList.add(Joints.AND);
         }
         criteriaList.add(new Condition(column.name, link, $));
-        if(!indexMap.containsKey(column)) {
-            indexMap.put(column, indexMap.size()+1);
+        //index是从1开始的，先++
+        $length++;
+        NextIndex nIdx = indexMap.get(column.name);
+        if(nIdx == null) {
+            indexMap.put(column.name, new NextIndex1($length));
+        } else {
+            indexMap.put(column.name, nIdx.add($length));
         }
         return (T) this;
     }

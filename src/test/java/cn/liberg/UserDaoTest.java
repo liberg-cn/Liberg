@@ -111,8 +111,7 @@ public class UserDaoTest {
         user.createTime = nowMills;
         user.age = 100;
         userDao.asyncSave(user);
-        Thread.sleep(10);
-        Thread.sleep(10);
+        Thread.sleep(50);
         /**
          * 检查是否保存成功
          */
@@ -126,8 +125,7 @@ public class UserDaoTest {
         selectedUser.age = 10;
         selectedUser.name = "AysncUpdated_"+nowMills;
         userDao.asyncUpdate(selectedUser);
-        Thread.sleep(10);
-        Thread.sleep(10);
+        Thread.sleep(50);
         /**
          * 检查是否更新成功
          */

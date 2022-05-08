@@ -19,6 +19,11 @@ package cn.liberg.database;
  *
  */
 public class WhereMeta {
+    public static final String AND = " and ";
+    public static final String OR = " or ";
+    public static final String NOT = " not ";
+    public static final String BRACKET_START = "(";
+    public static final String BRACKET_END = ")";
 
     /**
      * String值

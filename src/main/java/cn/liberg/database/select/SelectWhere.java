@@ -5,6 +5,8 @@ import cn.liberg.core.OperatorException;
 import cn.liberg.core.StatusCode;
 import cn.liberg.database.BaseDao;
 import cn.liberg.database.DBHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -12,19 +14,18 @@ import java.sql.Statement;
 import java.util.List;
 
 /**
- * select 操作的执行类。
+ * 数据表查询操作的执行类。
  *
  * @param <T>
  *
  * @author Liberg
  */
 public class SelectWhere<T> extends Where<SelectWhere<T>> {
+    private static final Logger logger = LoggerFactory.getLogger(DBHelper.class);
 
     private final Select<T> select;
     private Column orderBy = null;
     private boolean isAsc = true;
-    private int limitStart = 0;
-    private int limitCount = 1000;
 
     public SelectWhere(Select<T> select) {
         this.select = select;
@@ -48,24 +49,14 @@ public class SelectWhere<T> extends Where<SelectWhere<T>> {
         return this;
     }
 
-    public SelectWhere<T> limit(int count) {
-        limitCount = count;
-        return this;
-    }
-
-    public SelectWhere<T> limit(int start, int count) {
-        limitStart = start;
-        limitCount = count;
-        return this;
-    }
-
     public T one() throws OperatorException {
         DBHelper dbHelper = BaseDao.dbHelper;
         Statement statement = dbHelper.createStatement();
         boolean isTxError = false;
         try {
-            limit(1);
-            ResultSet rs = statement.executeQuery(buildSql());
+            final StringBuilder sql = buildSql();
+            sql.append(" limit 1;");
+            ResultSet rs = statement.executeQuery(sql.toString());
             return select.readOne(rs);
         } catch (SQLException e) {
             isTxError = DBHelper.isTxError(e);
@@ -75,12 +66,54 @@ public class SelectWhere<T> extends Where<SelectWhere<T>> {
         }
     }
 
-    public List<T> all() throws OperatorException {
+    public List<T> all(int limitCount) throws OperatorException {
+        final StringBuilder sb = buildSql();
+        sb.append(" limit ");
+        sb.append(limitCount);
+        return executeQuery(sb.toString());
+    }
+
+    public List<T> allFill(int limitCount) throws OperatorException {
+        List<T> list = all(limitCount);
+        for(T e : list) {
+            select.dao.fillData(e);
+        }
+        return list;
+    }
+
+    public List<T> page(int pageNum, int pageSize) throws OperatorException {
+        final StringBuilder sql = buildSql();
+        sql.append(" limit ");
+        sql.append((pageNum - 1) * pageSize);
+        sql.append(',');
+        sql.append(pageSize);
+        return executeQuery(sql.toString());
+    }
+
+    public List<T> pageFill(int pageNum, int pageSize) throws OperatorException {
+        List<T> list = page(pageNum, pageSize);
+        for (T e : list) {
+            select.dao.fillData(e);
+        }
+        return list;
+    }
+
+    public int count() throws OperatorException {
+        final StringBuilder where = new StringBuilder();
+        appendConditionTo(where);
+        return select.dao.getCount(where.toString());
+    }
+
+    private List<T> executeQuery(String sql) throws OperatorException {
+        if(logger.isDebugEnabled()) {
+            logger.debug(sql);
+        }
+        System.out.println("query: " + sql);
         DBHelper dbHelper = BaseDao.dbHelper;
         Statement statement = dbHelper.createStatement();
         boolean isTxError = false;
         try {
-            ResultSet rs = statement.executeQuery(buildSql());
+            ResultSet rs = statement.executeQuery(sql);
             return select.readAll(rs);
         } catch (SQLException e) {
             isTxError = DBHelper.isTxError(e);
@@ -90,38 +123,18 @@ public class SelectWhere<T> extends Where<SelectWhere<T>> {
         }
     }
 
-    public List<T> page(int pageNum, int pageSize) throws OperatorException {
-        int start = (pageNum-1)*pageSize;
-        limit(start, pageSize);
-        return all();
-    }
-
-    public int count() throws OperatorException {
-        return select.dao.getCount(buildCondition().toString());
-    }
-
-    private String buildSql() {
-        StringBuilder sb = select.build();
-        sb.append(" where ");
-        sb.append(buildWhere());
-        return sb.toString();
-    }
-
-    protected String buildWhere() {
-        StringBuilder sb = buildCondition();
+    private StringBuilder buildSql() {
+        StringBuilder sql = select.build();
+        sql.append(" where ");
+        appendConditionTo(sql);
         if (orderBy != null) {
-            sb.append(" order by ");
-            sb.append(orderBy.name);
+            sql.append(" order by ");
+            sql.append(orderBy.name);
             if (!isAsc) {
-                sb.append(" desc ");
+                sql.append(" desc ");
             }
         }
-        sb.append(" limit ");
-        sb.append(limitStart);
-        sb.append(',');
-        sb.append(limitCount);
-        sb.append(';');
-        return sb.toString();
+        return sql;
     }
 
     @Override

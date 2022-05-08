@@ -117,40 +117,40 @@ public class JoinQuery {
         return addCondition(column1, Condition.EQ, column2.name);
     }
 
-    public JoinQuery eq(Column<String> column, String val) {
+    public JoinQuery eq(Field<String> column, String val) {
         if (phase.isOne()) {
             val = "'" + val + "'";
         }
         return addCondition(column, Condition.EQ, val);
     }
 
-    public JoinQuery eq(Column<Integer> column, int val) {
+    public JoinQuery eq(Field<Integer> column, int val) {
         return addCondition(column, Condition.EQ, "" + val);
     }
 
-    public JoinQuery eq(Column<Long> column, long val) {
+    public JoinQuery eq(Field<Long> column, long val) {
         return addCondition(column, Condition.EQ, "" + val);
     }
 
-    public JoinQuery ne(Column<String> column, String val) {
+    public JoinQuery ne(Field<String> column, String val) {
         if (phase.isOne()) {
             val = "'" + val + "'";
         }
         return addCondition(column, Condition.NE, val);
     }
 
-    public JoinQuery ne(Column<Integer> column, int val) {
+    public JoinQuery ne(Field<Integer> column, int val) {
         return addCondition(column, Condition.NE, "" + val);
     }
 
-    public JoinQuery ne(Column<Long> column, long val) {
+    public JoinQuery ne(Field<Long> column, long val) {
         return addCondition(column, Condition.NE, "" + val);
     }
 
     /**
      * like
      */
-    public JoinQuery like(Column<String> column, String val) {
+    public JoinQuery like(Field<String> column, String val) {
         if (phase.isOne()) {
             val = "'" + val + "'";
         }
@@ -161,38 +161,38 @@ public class JoinQuery {
     /**
      * great equal or great than
      */
-    public JoinQuery ge(Column<Integer> column, int val) {
+    public JoinQuery ge(Field<Integer> column, int val) {
         return addCondition(column, Condition.GE, "" + val);
     }
 
-    public JoinQuery ge(Column<Long> column, long val) {
+    public JoinQuery ge(Field<Long> column, long val) {
         return addCondition(column, Condition.GE, "" + val);
     }
 
-    public JoinQuery gt(Column<Integer> column, int val) {
+    public JoinQuery gt(Field<Integer> column, int val) {
         return addCondition(column, Condition.GT, "" + val);
     }
 
-    public JoinQuery gt(Column<Long> column, long val) {
+    public JoinQuery gt(Field<Long> column, long val) {
         return addCondition(column, Condition.GT, "" + val);
     }
 
     /**
      * less equal or less than
      */
-    public JoinQuery le(Column<Integer> column, int val) {
+    public JoinQuery le(Field<Integer> column, int val) {
         return addCondition(column, Condition.LE, "" + val);
     }
 
-    public JoinQuery le(Column<Long> column, long val) {
+    public JoinQuery le(Field<Long> column, long val) {
         return addCondition(column, Condition.LE, "" + val);
     }
 
-    public JoinQuery lt(Column<Integer> column, int val) {
+    public JoinQuery lt(Field<Integer> column, int val) {
         return addCondition(column, Condition.LT, "" + val);
     }
 
-    public JoinQuery lt(Column<Long> column, long val) {
+    public JoinQuery lt(Field<Long> column, long val) {
         return addCondition(column, Condition.LT, "" + val);
     }
 
@@ -220,7 +220,7 @@ public class JoinQuery {
     }
 
 
-    private JoinQuery addCondition(Column column, String mid, String value) {
+    private JoinQuery addCondition(Field column, String mid, String value) {
         String name = column.name;
         switch (phase) {
             case ON_TWO:
